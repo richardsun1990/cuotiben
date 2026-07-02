@@ -202,6 +202,8 @@ textarea.fi{line-height:1.55;}
 /* Tool bar */
 .pp-tools{background:#2C2C2E;border-bottom:.5px solid rgba(255,255,255,.05);padding:9px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
 .pp-sep2{width:.5px;height:22px;background:rgba(255,255,255,.1);margin:0 2px;}
+.mode-btn{padding:7px 11px;border-radius:12px;border:.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(235,235,245,.72);font-size:12px;font-weight:500;white-space:nowrap;transition:background .12s,color .12s;}
+.mode-btn.on{background:rgba(79,70,229,.26);color:#fff;border-color:rgba(79,70,229,.55);}
 .pc{width:26px;height:26px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;flex-shrink:0;transition:border-color .12s,transform .15s var(--spring);}
 .pc:active{transform:scale(.86);}
 .pc.on{border-color:#fff;transform:scale(1.1);}
@@ -236,10 +238,11 @@ textarea.fi{line-height:1.55;}
   background:#FAFAF8;
   border-radius:6px;
   box-shadow:0 8px 48px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.4);
-  /* horizontal rule lines baked into background */
-  background-image:repeating-linear-gradient(
-    to bottom,transparent 0px,transparent 39px,rgba(0,122,255,.08) 40px
-  );
+  background-image:
+    linear-gradient(rgba(0,122,255,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,122,255,.045) 1px,transparent 1px),
+    repeating-linear-gradient(to bottom,transparent 0px,transparent 39px,rgba(0,122,255,.08) 40px);
+  background-size:40px 40px,40px 40px,auto;
 }
 
 /* Hint */
@@ -261,6 +264,13 @@ textarea.fi{line-height:1.55;}
   display:flex;align-items:center;gap:5px;
 }
 .cv-reset-btn:active{background:rgba(68,68,70,.95);}
+.zoom-chip{
+  position:absolute;top:14px;left:14px;z-index:5;
+  padding:6px 10px;border-radius:16px;border:.5px solid rgba(255,255,255,.08);
+  background:rgba(28,28,30,.72);backdrop-filter:blur(10px);
+  color:rgba(235,235,245,.62);font-size:12px;font-variant-numeric:tabular-nums;
+  pointer-events:none;
+}
 
 /* Footer */
 .pp-foot{background:#2C2C2E;border-top:.5px solid rgba(255,255,255,.05);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -429,6 +439,8 @@ textarea.fi{line-height:1.55;}
       <div class="pc"     style="background:#AF52DE" onclick="pickColor('#AF52DE',this)"></div>
     </div>
     <div class="pp-sep2"></div>
+    <button class="mode-btn on" id="fingerModeBtn" onclick="toggleFingerMode()" title="切换手指行为">手指书写</button>
+    <div class="pp-sep2"></div>
     <span class="sz-lbl">粗细</span>
     <input type="range" class="sz-sl" min="1" max="20" value="3" id="szSl" oninput="penSz=+this.value;document.getElementById('szV').textContent=this.value">
     <span class="sz-val" id="szV">3</span>
@@ -440,11 +452,12 @@ textarea.fi{line-height:1.55;}
       <canvas id="cv"></canvas>
     </div>
     <div class="stage-hint">双指缩放 · 单指移动画布 · 用笔书写</div>
+    <div class="zoom-chip" id="zoomChip">100%</div>
     <button class="cv-reset-btn" onclick="resetView()" title="还原视图">↺ 还原</button>
   </div>
   <!-- Footer -->
   <div class="pp-foot">
-    <button class="p-ghost" onclick="clearCv()">清除画布</button>
+    <button class="p-ghost" onclick="askClearCv()">清除画布</button>
     <button class="p-ghost" onclick="cycleFromPP()">切换状态</button>
     <button class="p-prime" onclick="saveAnswer()">保存作答 ✓</button>
   </div>
@@ -511,9 +524,7 @@ window.addEventListener('resize',()=>{
   }
   // re-init canvas if pencil panel open
   if(document.getElementById('pp').classList.contains('open')){
-    const snap=document.getElementById('cv').toDataURL();
-    initCv();
-    const img=new Image();img.onload=()=>getCtx().drawImage(img,0,0);img.src=snap;
+    resetView();
   }
 });
 
@@ -731,7 +742,7 @@ let tx = 0, ty = 0, sc = 1;
 let strokes = [], curStroke = null;
 
 // Pen
-let penColor = '#1C1C1E', penSz = 3, penTool = 'pen';
+let penColor = '#1C1C1E', penSz = 3, penTool = 'pen', fingerDraw = true;
 let ppId = null;
 
 // Touch state — keyed by touch identifier
@@ -760,6 +771,8 @@ function ctx(){ return cvEl.getContext('2d'); }
 
 function applyXform(){
   world.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`;
+  const z=document.getElementById('zoomChip');
+  if(z) z.textContent = Math.round(sc*100) + '%';
 }
 
 // Clamp so canvas can't disappear entirely
@@ -805,6 +818,11 @@ function paintBackground(c){
   c.save();
   c.fillStyle = '#FAFAF8';
   c.fillRect(0,0,CW,CH);
+  c.strokeStyle = 'rgba(0,122,255,0.045)';
+  c.lineWidth = 1;
+  for(let x=40; x<CW; x+=40){
+    c.beginPath(); c.moveTo(x,0); c.lineTo(x,CH); c.stroke();
+  }
   c.strokeStyle = 'rgba(0,122,255,0.07)';
   c.lineWidth = 1;
   for(let y=40; y<CH; y+=40){
@@ -816,35 +834,42 @@ function paintBackground(c){
 function redrawAll(){
   const c = ctx();
   paintBackground(c);
-  strokes.forEach(s => {
-    if(s.pts.length < 1) return;
-    c.save();
-    c.globalAlpha = s.t==='mark' ? 0.28 : 1;
-    c.strokeStyle = s.c;
-    c.lineWidth   = s.t==='mark' ? s.s*3.5 : s.s;
-    c.lineCap = 'round'; c.lineJoin = 'round';
+  strokes.forEach(drawStroke);
+  if(curStroke) drawStroke(curStroke);
+}
+
+function drawStroke(s){
+  if(!s || !s.pts || !s.pts.length || s.t==='erase') return;
+  const c = ctx();
+  const pts = s.pts;
+  c.save();
+  c.globalAlpha = s.t==='mark' ? 0.28 : 1;
+  c.strokeStyle = s.c;
+  c.lineWidth   = s.t==='mark' ? s.s*3.5 : s.s;
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  if(pts.length===1){
     c.beginPath();
-    c.moveTo(s.pts[0].x, s.pts[0].y);
-    for(let i=1;i<s.pts.length;i++) c.lineTo(s.pts[i].x, s.pts[i].y);
-    c.stroke();
+    c.arc(pts[0].x, pts[0].y, Math.max(1,c.lineWidth/2), 0, Math.PI*2);
+    c.fillStyle=s.c;
+    c.fill();
     c.restore();
-  });
+    return;
+  }
+  c.beginPath();
+  c.moveTo(pts[0].x, pts[0].y);
+  for(let i=1;i<pts.length-1;i++){
+    const mx=(pts[i].x+pts[i+1].x)/2;
+    const my=(pts[i].y+pts[i+1].y)/2;
+    c.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+  }
+  const last=pts[pts.length-1];
+  c.lineTo(last.x,last.y);
+  c.stroke();
+  c.restore();
 }
 
 function segment(ax,ay,bx,by){
   const c = ctx();
-  if(penTool==='erase'){
-    const er = penSz*7+4;
-    c.clearRect(bx-er/2, by-er/2, er, er);
-    // restore guide lines in cleared rect
-    c.save();
-    c.strokeStyle='rgba(0,122,255,0.07)'; c.lineWidth=1;
-    const y0=Math.floor((by-er/2)/40)*40, y1=Math.ceil((by+er/2)/40)*40;
-    for(let y=y0;y<=y1;y+=40){
-      c.beginPath(); c.moveTo(Math.max(0,bx-er/2),y); c.lineTo(Math.min(CW,bx+er/2),y); c.stroke();
-    }
-    c.restore(); return;
-  }
   c.save();
   c.globalAlpha = penTool==='mark'?0.28:1;
   c.strokeStyle = penColor;
@@ -852,6 +877,20 @@ function segment(ax,ay,bx,by){
   c.lineCap='round'; c.lineJoin='round';
   c.beginPath(); c.moveTo(ax,ay); c.lineTo(bx,by); c.stroke();
   c.restore();
+}
+
+function eraseAt(x,y){
+  const r = penSz*6+10;
+  const r2 = r*r;
+  const before = strokes.length;
+  strokes = strokes.filter(s => {
+    if(!s.pts || s.t==='erase') return false;
+    return !s.pts.some(p => {
+      const dx=p.x-x, dy=p.y-y;
+      return dx*dx+dy*dy <= r2;
+    });
+  });
+  if(strokes.length!==before) redrawAll();
 }
 
 /* ══════════════════════════════════════════════
@@ -864,12 +903,13 @@ function openPP(id){
   document.getElementById('pp').classList.add('open');
   strokes = []; curStroke = null; gMode = null; touches = {};
   setTool('pen');
+  setFingerMode(true);
   // hide hint after 3 s
   const hint = document.querySelector('.stage-hint');
   if(hint){ hint.classList.remove('hide'); clearTimeout(hint._t); hint._t=setTimeout(()=>hint.classList.add('hide'),3000); }
   requestAnimationFrame(()=>{
     initCanvas(); resetView();
-    if(x.strokes){ strokes = x.strokes; redrawAll(); }
+    if(x.strokes){ strokes = x.strokes.filter(s=>s.t!=='erase'); redrawAll(); }
     else if(x.ansImg){
       const img=new Image();
       img.onload=()=>ctx().drawImage(img,0,0,CW,CH);
@@ -883,7 +923,7 @@ function closePP(){ document.getElementById('pp').classList.remove('open'); ppId
    TOUCH GESTURES  —  Apple Photos model
    
    Rule set (same as iOS Photos):
-   • 1 finger on canvas  → draw (pen/eraser)
+   • 1 finger on canvas  → draw, or pan when finger writing is off
    • 1 finger on BG/world outside canvas → pan
    • 2 fingers anywhere  → pinch-zoom (+ simultaneous pan)
    • Apple Pencil (stylus pointer) → always draw, fingers always pan/pinch
@@ -943,10 +983,17 @@ cvEl.addEventListener('touchstart', e=>{
   Array.from(e.changedTouches).forEach(t=>{ touches[t.identifier]={x:t.clientX,y:t.clientY}; });
   const n=Object.keys(touches).length;
   if(n>=2){ startPinch(); return; }
-  // single finger on canvas = draw
   const t0=e.changedTouches[0];
+  if(!fingerDraw){
+    gMode='pan';
+    panAnchorX=t0.clientX; panAnchorY=t0.clientY;
+    panAnchorTx=tx; panAnchorTy=ty;
+    return;
+  }
+  // single finger on canvas = draw
   gMode='draw';
   const p=s2c(t0.clientX,t0.clientY);
+  if(penTool==='erase'){ eraseAt(p.x,p.y); return; }
   drawLastX=p.x; drawLastY=p.y;
   curStroke={c:penColor,s:penSz,t:penTool,pts:[{x:p.x,y:p.y}]};
 },{passive:false});
@@ -956,9 +1003,17 @@ cvEl.addEventListener('touchmove', e=>{
   Array.from(e.changedTouches).forEach(t=>{ touches[t.identifier]={x:t.clientX,y:t.clientY}; });
   const n=Object.keys(touches).length;
   if(n>=2){ if(gMode!=='pinch') startPinch(); else doPinch(); return; }
-  if(gMode!=='draw'||!curStroke) return;
+  if(gMode==='pan'){
+    const t0=e.changedTouches[0];
+    tx=panAnchorTx+(t0.clientX-panAnchorX);
+    ty=panAnchorTy+(t0.clientY-panAnchorY);
+    clamp(); applyXform();
+    return;
+  }
   const t0=e.changedTouches[0];
   const p=s2c(t0.clientX,t0.clientY);
+  if(gMode==='draw'&&penTool==='erase'){ eraseAt(p.x,p.y); return; }
+  if(gMode!=='draw'||!curStroke) return;
   segment(drawLastX,drawLastY,p.x,p.y);
   curStroke.pts.push({x:p.x,y:p.y});
   drawLastX=p.x; drawLastY=p.y;
@@ -1032,19 +1087,22 @@ cvEl.addEventListener('pointerdown', e=>{
   e.preventDefault();
   gMode='draw';
   const p=s2c(e.clientX,e.clientY);
+  if(penTool==='erase'){ eraseAt(p.x,p.y); cvEl.setPointerCapture(e.pointerId); return; }
   drawLastX=p.x; drawLastY=p.y;
-  curStroke={c:penColor,s:penSz,t:penTool,pts:[{x:p.x,y:p.y}]};
+  curStroke={c:penColor,s:penSz,t:penTool,pts:[{x:p.x,y:p.y,p:e.pressure||.5}]};
   cvEl.setPointerCapture(e.pointerId);
 },{passive:false});
 
 cvEl.addEventListener('pointermove', e=>{
-  if(e.pointerType!=='pen'||!curStroke) return;
+  if(e.pointerType!=='pen') return;
+  if(penTool!=='erase' && !curStroke) return;
   e.preventDefault();
   const evts=e.getCoalescedEvents?e.getCoalescedEvents():[e];
   evts.forEach(ev=>{
     const p=s2c(ev.clientX,ev.clientY);
+    if(penTool==='erase'){ eraseAt(p.x,p.y); return; }
     segment(drawLastX,drawLastY,p.x,p.y);
-    curStroke.pts.push({x:p.x,y:p.y});
+    curStroke.pts.push({x:p.x,y:p.y,p:ev.pressure||.5});
     drawLastX=p.x; drawLastY=p.y;
   });
 },{passive:false});
@@ -1060,12 +1118,15 @@ cvEl.addEventListener('mousedown', e=>{
   if(e.button!==0) return;
   mDrawing=true;
   const p=s2c(e.clientX,e.clientY);
+  if(penTool==='erase'){ eraseAt(p.x,p.y); return; }
   drawLastX=p.x; drawLastY=p.y;
   curStroke={c:penColor,s:penSz,t:penTool,pts:[{x:p.x,y:p.y}]};
 });
 cvEl.addEventListener('mousemove', e=>{
-  if(!mDrawing||!curStroke) return;
+  if(!mDrawing) return;
   const p=s2c(e.clientX,e.clientY);
+  if(penTool==='erase'){ eraseAt(p.x,p.y); return; }
+  if(!curStroke) return;
   segment(drawLastX,drawLastY,p.x,p.y);
   curStroke.pts.push({x:p.x,y:p.y});
   drawLastX=p.x; drawLastY=p.y;
@@ -1110,6 +1171,16 @@ function setTool(t){
   if(m[t]) document.getElementById(m[t]).classList.add('on');
   cvEl.style.cursor = t==='erase'?'cell':'crosshair';
 }
+function setFingerMode(on){
+  fingerDraw = !!on;
+  const b=document.getElementById('fingerModeBtn');
+  if(!b) return;
+  b.classList.toggle('on', fingerDraw);
+  b.textContent = fingerDraw ? '手指书写' : '手指移动';
+  const hint=document.querySelector('.stage-hint');
+  if(hint) hint.textContent = fingerDraw ? '双指缩放 · 手指/Apple Pencil 书写' : '双指缩放 · 手指移动画布 · Apple Pencil 书写';
+}
+function toggleFingerMode(){ setFingerMode(!fingerDraw); }
 function pickColor(c,el){
   penColor=c;
   document.querySelectorAll('.pc').forEach(d=>d.classList.remove('on'));
@@ -1117,14 +1188,21 @@ function pickColor(c,el){
   if(penTool==='erase') setTool('pen');
 }
 function undoLast(){ strokes.pop(); redrawAll(); }
-function clearCv(){ strokes=[]; initCanvas(); }
+function clearCv(){ strokes=[]; curStroke=null; redrawAll(); }
+function askClearCv(){
+  document.getElementById('dlgTitle').textContent='清除作答';
+  document.getElementById('dlgDesc').textContent='当前画布上的手写内容会被清除，题目本身不会删除。';
+  document.getElementById('dlgOk').textContent='清除';
+  document.getElementById('dlgOk').onclick=()=>{clearCv();closeDlg();toast('画布已清除');};
+  document.getElementById('dlgOv').classList.add('open');
+}
 function cycleFromPP(){ if(ppId) cycleSt(ppId); }
 
 function saveAnswer(){
   if(!ppId) return;
   const x=qs.find(q=>q.id===ppId); if(!x) return;
   x.ansImg  = cvEl.toDataURL('image/jpeg', 0.88);
-  x.strokes = strokes.map(s=>({...s, pts:[...s.pts]}));
+  x.strokes = strokes.filter(s=>s.t!=='erase').map(s=>({...s, pts:s.pts.map(p=>({...p}))}));
   if(x.status==='wrong') x.status='review';
   persist(); render(); toast('✓ 作答已保存'); closePP();
 }
