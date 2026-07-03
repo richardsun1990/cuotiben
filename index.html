@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>错题本</title>
+<title>嘟嘟错题本</title>
 <style>
 /* ── TOKENS ──────────────────────────────────── */
 :root{
-  --bg:#F2F1F6;--bg2:#E8E7ED;
+  --bg:#F4F3F8;--bg2:#EDECF4;
   --surface:#FFFFFF;--surface2:#F7F7F8;
   --border:rgba(60,60,67,.12);--border2:rgba(60,60,67,.07);
   --label:#1C1C1E;--label2:#3C3C43;
   --label3:rgba(60,60,67,.60);--label4:rgba(60,60,67,.36);
-  --accent:#4F46E5;--accent-bg:rgba(79,70,229,.09);
+  --accent:#4F46E5;--accent2:#00A6A6;--accent-bg:rgba(79,70,229,.09);
   --red:#FF3B30;--red-bg:rgba(255,59,48,.10);
   --orange:#FF9500;--orange-bg:rgba(255,149,0,.10);
   --green:#34C759;--green-bg:rgba(52,199,89,.10);
@@ -24,7 +24,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;height:100dvh;overflow:hidden;}
-body{font-family:var(--font);background:var(--bg);color:var(--label);display:flex;flex-direction:column;}
+body{font-family:var(--font);background:linear-gradient(180deg,#FAFAFD 0%,var(--bg) 34%,#ECEBF4 100%);color:var(--label);display:flex;flex-direction:column;}
 input,textarea,select,button{font-family:inherit;}
 textarea{resize:none;}
 button{cursor:pointer;}
@@ -34,12 +34,12 @@ button{cursor:pointer;}
 
 /* ── TOPBAR ──────────────────────────────────── */
 .topbar{
-  height:52px;flex-shrink:0;z-index:30;
-  background:rgba(242,241,246,.9);
+  height:58px;flex-shrink:0;z-index:30;
+  background:rgba(250,250,253,.86);
   backdrop-filter:saturate(180%) blur(24px);
   -webkit-backdrop-filter:saturate(180%) blur(24px);
   border-bottom:.5px solid var(--border);
-  display:flex;align-items:center;padding:0 14px;gap:10px;
+  display:flex;align-items:center;padding:0 16px;gap:10px;
 }
 .tb-sb-btn{
   width:36px;height:36px;border-radius:10px;border:none;
@@ -48,7 +48,8 @@ button{cursor:pointer;}
   transition:background .12s;flex-shrink:0;
 }
 .tb-sb-btn:active{background:var(--accent-bg);}
-.topbar-title{font-size:17px;font-weight:600;letter-spacing:-.3px;flex:1;}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:0 8px 18px rgba(79,70,229,.22);flex-shrink:0;}
+.topbar-title{font-size:18px;font-weight:750;letter-spacing:-.3px;flex:1;}
 .tb-more{display:flex;align-items:center;padding:7px 13px;border-radius:20px;border:.5px solid var(--border);background:var(--surface);color:var(--label2);font-size:14px;transition:background .12s;}
 .tb-more:active{background:var(--bg2);}
 .tb-add{display:flex;align-items:center;gap:5px;padding:7px 16px;border-radius:20px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:500;transition:opacity .15s,transform .15s var(--spring);}
@@ -126,11 +127,11 @@ button{cursor:pointer;}
 .srch-box input::placeholder{color:var(--label4);}
 .sort-btn{padding:7px 12px;border-radius:var(--r-sm);border:.5px solid var(--border);background:var(--surface);font-size:13px;color:var(--label2);white-space:nowrap;transition:background .12s;}
 .sort-btn:active{background:var(--bg2);}
-.cards-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;}
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:12px;}
+.cards-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
 
 /* ── CARD ────────────────────────────────────── */
-.card{background:var(--surface);border-radius:var(--r-lg);border:.5px solid var(--border2);overflow:hidden;transition:transform .18s var(--spring),box-shadow .18s var(--out);will-change:transform;animation:cardIn .26s var(--spring) both;}
+.card{background:rgba(255,255,255,.92);border-radius:12px;border:.5px solid rgba(60,60,67,.09);overflow:hidden;box-shadow:0 10px 26px rgba(34,34,46,.05);transition:transform .18s var(--spring),box-shadow .18s var(--out);will-change:transform;animation:cardIn .26s var(--spring) both;}
 @keyframes cardIn{from{opacity:0;transform:scale(.94) translateY(6px);}to{opacity:1;transform:scale(1) translateY(0);}}
 .card:active{transform:scale(.975);box-shadow:0 2px 8px rgba(0,0,0,.07);}
 .card-head{padding:13px 14px 9px;display:flex;align-items:center;gap:8px;}
@@ -153,8 +154,8 @@ button{cursor:pointer;}
 .c-btn.d{color:var(--red);}
 
 /* ── EMPTY ───────────────────────────────────── */
-.empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:80px 40px;text-align:center;}
-.empty-icon{font-size:50px;margin-bottom:4px;}
+.empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:86px 40px;text-align:center;}
+.empty-icon{width:68px;height:68px;border-radius:18px;background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(0,166,166,.13));display:flex;align-items:center;justify-content:center;font-size:34px;margin-bottom:4px;}
 .empty-title{font-size:18px;font-weight:600;color:var(--label2);letter-spacing:-.3px;}
 .empty-desc{font-size:14px;color:var(--label3);line-height:1.6;max-width:230px;}
 .empty-btn{margin-top:8px;padding:10px 22px;border-radius:22px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:500;}
@@ -315,8 +316,8 @@ textarea.fi{line-height:1.55;}
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="tb-sb-btn" id="sbToggleBtn" onclick="toggleSB()" title="切换菜单">☰</button>
-  <span style="font-size:20px">📖</span>
-  <div class="topbar-title">错题本</div>
+  <div class="brand-mark">嘟</div>
+  <div class="topbar-title">嘟嘟错题本</div>
   <button class="tb-more" onclick="togglePop(event)" id="moreBtn">更多 ···</button>
   <button class="tb-add" onclick="openAdd()">＋ 添加</button>
 </div>
@@ -570,7 +571,7 @@ function render(){
 
   const g=document.getElementById('grid');
   if(!list.length){
-    g.innerHTML=`<div class="empty"><div class="empty-icon">${q?'🔍':'📝'}</div><div class="empty-title">${q?'没有匹配的错题':'还没有错题'}</div><div class="empty-desc">${q?'换个关键词试试':'点击「添加」录入第一道错题。'}</div>${!q?'<button class="empty-btn" onclick="openAdd()">＋ 添加错题</button>':''}</div>`;
+    g.innerHTML=`<div class="empty"><div class="empty-icon">${q?'🔍':'嘟'}</div><div class="empty-title">${q?'没有匹配的错题':'还没有错题'}</div><div class="empty-desc">${q?'换个关键词试试':'点击「添加」录入第一道错题。'}</div>${!q?'<button class="empty-btn" onclick="openAdd()">＋ 添加错题</button>':''}</div>`;
     return;
   }
   const stC={wrong:{l:'未掌握',c:'st-wrong'},review:{l:'复习中',c:'st-review'},done:{l:'已掌握',c:'st-done'}};
@@ -680,7 +681,7 @@ function doExport(){
   closePop();
   const b=new Blob([JSON.stringify(qs,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  a.download=`错题本_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
+  a.download=`嘟嘟错题本_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
   a.click();URL.revokeObjectURL(a.href);toast('✓ 已导出 '+qs.length+' 道');
 }
 function doImport(input){
@@ -759,6 +760,8 @@ let pinchAnchorDist = 0, pinchAnchorMx = 0, pinchAnchorMy = 0;
 let drawLastX = 0, drawLastY = 0;
 // Mouse
 let mDrawing = false;
+let lastPointerTouchAt = 0;
+let pointerTouches = {};
 
 /* ══════════════════════════════════════════════
    CANVAS HELPERS
@@ -901,7 +904,7 @@ function openPP(id){
   const x = qs.find(q=>q.id===id); if(!x) return;
   document.getElementById('ppQ').textContent = x.q;
   document.getElementById('pp').classList.add('open');
-  strokes = []; curStroke = null; gMode = null; touches = {};
+  strokes = []; curStroke = null; gMode = null; touches = {}; pointerTouches = {};
   setTool('pen');
   setFingerMode(true);
   // hide hint after 3 s
@@ -941,6 +944,17 @@ function touchMid(){
   };
 }
 
+function pointerTouchMid(){
+  const ids = Object.keys(pointerTouches);
+  const a = pointerTouches[ids[0]], b = pointerTouches[ids[1]];
+  const r = stage.getBoundingClientRect();
+  return {
+    x: (a.x+b.x)/2 - r.left,
+    y: (a.y+b.y)/2 - r.top,
+    d: Math.hypot(b.x-a.x, b.y-a.y)
+  };
+}
+
 /* ══════════════════════════════════════════════
    GESTURE SYSTEM
    
@@ -964,8 +978,23 @@ function startPinch(){
   pinchAnchorSc=sc; pinchAnchorTx=tx; pinchAnchorTy=ty;
   pinchAnchorDist=m.d; pinchAnchorMx=m.x; pinchAnchorMy=m.y;
 }
+function startPointerPinch(){
+  if(curStroke){ strokes.push(curStroke); curStroke=null; }
+  gMode='pinch';
+  const m=pointerTouchMid();
+  pinchAnchorSc=sc; pinchAnchorTx=tx; pinchAnchorTy=ty;
+  pinchAnchorDist=m.d; pinchAnchorMx=m.x; pinchAnchorMy=m.y;
+}
 function doPinch(){
   const m=touchMid();
+  const newSc=Math.max(0.1,Math.min(6, pinchAnchorSc*m.d/pinchAnchorDist));
+  const lx=(pinchAnchorMx-pinchAnchorTx)/pinchAnchorSc;
+  const ly=(pinchAnchorMy-pinchAnchorTy)/pinchAnchorSc;
+  tx=m.x-lx*newSc; ty=m.y-ly*newSc; sc=newSc;
+  clamp(); applyXform();
+}
+function doPointerPinch(){
+  const m=pointerTouchMid();
   const newSc=Math.max(0.1,Math.min(6, pinchAnchorSc*m.d/pinchAnchorDist));
   const lx=(pinchAnchorMx-pinchAnchorTx)/pinchAnchorSc;
   const ly=(pinchAnchorMy-pinchAnchorTy)/pinchAnchorSc;
@@ -977,8 +1006,13 @@ function endGesture(){
   gMode=null;
 }
 
+function shouldIgnoreLegacyTouch(){
+  return Date.now() - lastPointerTouchAt < 700;
+}
+
 // ── DRAW: touch events bound directly on the canvas element ──
 cvEl.addEventListener('touchstart', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   e.preventDefault(); e.stopPropagation();
   Array.from(e.changedTouches).forEach(t=>{ touches[t.identifier]={x:t.clientX,y:t.clientY}; });
   const n=Object.keys(touches).length;
@@ -999,6 +1033,7 @@ cvEl.addEventListener('touchstart', e=>{
 },{passive:false});
 
 cvEl.addEventListener('touchmove', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   e.preventDefault(); e.stopPropagation();
   Array.from(e.changedTouches).forEach(t=>{ touches[t.identifier]={x:t.clientX,y:t.clientY}; });
   const n=Object.keys(touches).length;
@@ -1020,6 +1055,7 @@ cvEl.addEventListener('touchmove', e=>{
 },{passive:false});
 
 cvEl.addEventListener('touchend', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   e.preventDefault(); e.stopPropagation();
   Array.from(e.changedTouches).forEach(t=>{ delete touches[t.identifier]; });
   const n=Object.keys(touches).length;
@@ -1034,12 +1070,14 @@ cvEl.addEventListener('touchend', e=>{
 },{passive:false});
 
 cvEl.addEventListener('touchcancel', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   Array.from(e.changedTouches).forEach(t=>{ delete touches[t.identifier]; });
   endGesture();
 },{passive:false});
 
 // ── PAN: touch events on the stage background ──
 stage.addEventListener('touchstart', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   e.preventDefault();
   Array.from(e.changedTouches).forEach(t=>{ touches[t.identifier]={x:t.clientX,y:t.clientY}; });
   const n=Object.keys(touches).length;
@@ -1052,6 +1090,7 @@ stage.addEventListener('touchstart', e=>{
 },{passive:false});
 
 stage.addEventListener('touchmove', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   e.preventDefault();
   Array.from(e.changedTouches).forEach(t=>{ touches[t.identifier]={x:t.clientX,y:t.clientY}; });
   const n=Object.keys(touches).length;
@@ -1064,6 +1103,7 @@ stage.addEventListener('touchmove', e=>{
 },{passive:false});
 
 stage.addEventListener('touchend', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   e.preventDefault();
   Array.from(e.changedTouches).forEach(t=>{ delete touches[t.identifier]; });
   const n=Object.keys(touches).length;
@@ -1077,26 +1117,53 @@ stage.addEventListener('touchend', e=>{
 },{passive:false});
 
 stage.addEventListener('touchcancel', e=>{
+  if(shouldIgnoreLegacyTouch()) return;
   Array.from(e.changedTouches).forEach(t=>{ delete touches[t.identifier]; });
   endGesture();
 },{passive:false});
 
-// ── Apple Pencil via Pointer Events ──
+// ── Pointer Events: Apple Pencil + iPad finger input ──
 cvEl.addEventListener('pointerdown', e=>{
-  if(e.pointerType!=='pen') return;
+  if(e.pointerType!=='pen'&&e.pointerType!=='touch') return;
   e.preventDefault();
-  gMode='draw';
+  e.stopPropagation();
+  if(e.pointerType==='touch'){
+    lastPointerTouchAt=Date.now();
+    pointerTouches[e.pointerId]={x:e.clientX,y:e.clientY};
+    try{cvEl.setPointerCapture(e.pointerId);}catch{}
+    const n=Object.keys(pointerTouches).length;
+    if(n>=2){ startPointerPinch(); return; }
+    if(!fingerDraw){
+      gMode='pan';
+      panAnchorX=e.clientX; panAnchorY=e.clientY;
+      panAnchorTx=tx; panAnchorTy=ty;
+      return;
+    }
+  }
   const p=s2c(e.clientX,e.clientY);
+  gMode='draw';
   if(penTool==='erase'){ eraseAt(p.x,p.y); cvEl.setPointerCapture(e.pointerId); return; }
   drawLastX=p.x; drawLastY=p.y;
   curStroke={c:penColor,s:penSz,t:penTool,pts:[{x:p.x,y:p.y,p:e.pressure||.5}]};
-  cvEl.setPointerCapture(e.pointerId);
+  try{cvEl.setPointerCapture(e.pointerId);}catch{}
 },{passive:false});
 
 cvEl.addEventListener('pointermove', e=>{
-  if(e.pointerType!=='pen') return;
-  if(penTool!=='erase' && !curStroke) return;
+  if(e.pointerType!=='pen'&&e.pointerType!=='touch') return;
   e.preventDefault();
+  if(e.pointerType==='touch'){
+    lastPointerTouchAt=Date.now();
+    if(pointerTouches[e.pointerId]) pointerTouches[e.pointerId]={x:e.clientX,y:e.clientY};
+    const n=Object.keys(pointerTouches).length;
+    if(n>=2){ if(gMode!=='pinch') startPointerPinch(); else doPointerPinch(); return; }
+    if(gMode==='pan'){
+      tx=panAnchorTx+(e.clientX-panAnchorX);
+      ty=panAnchorTy+(e.clientY-panAnchorY);
+      clamp(); applyXform();
+      return;
+    }
+  }
+  if(penTool!=='erase' && !curStroke) return;
   const evts=e.getCoalescedEvents?e.getCoalescedEvents():[e];
   evts.forEach(ev=>{
     const p=s2c(ev.clientX,ev.clientY);
@@ -1108,9 +1175,78 @@ cvEl.addEventListener('pointermove', e=>{
 },{passive:false});
 
 cvEl.addEventListener('pointerup', e=>{
-  if(e.pointerType!=='pen') return;
+  if(e.pointerType!=='pen'&&e.pointerType!=='touch') return;
+  if(e.pointerType==='touch'){
+    lastPointerTouchAt=Date.now();
+    delete pointerTouches[e.pointerId];
+    const n=Object.keys(pointerTouches).length;
+    if(n===1&&gMode==='pinch'){
+      const id=Object.keys(pointerTouches)[0];
+      const rem=pointerTouches[id];
+      panAnchorX=rem.x; panAnchorY=rem.y; panAnchorTx=tx; panAnchorTy=ty;
+      gMode='pan';
+      return;
+    }
+  }
   if(curStroke){ strokes.push(curStroke); curStroke=null; }
   gMode=null;
+},{passive:false});
+
+cvEl.addEventListener('pointercancel', e=>{
+  if(e.pointerType==='touch'){
+    lastPointerTouchAt=Date.now();
+    delete pointerTouches[e.pointerId];
+  }
+  if(curStroke){ strokes.push(curStroke); curStroke=null; }
+  gMode=null;
+},{passive:false});
+
+stage.addEventListener('pointerdown', e=>{
+  if(e.pointerType!=='touch') return;
+  if(e.target===cvEl||e.target===world) return;
+  e.preventDefault();
+  lastPointerTouchAt=Date.now();
+  pointerTouches[e.pointerId]={x:e.clientX,y:e.clientY};
+  try{stage.setPointerCapture(e.pointerId);}catch{}
+  const n=Object.keys(pointerTouches).length;
+  if(n>=2){ startPointerPinch(); return; }
+  gMode='pan';
+  panAnchorX=e.clientX; panAnchorY=e.clientY;
+  panAnchorTx=tx; panAnchorTy=ty;
+},{passive:false});
+
+stage.addEventListener('pointermove', e=>{
+  if(e.pointerType!=='touch') return;
+  e.preventDefault();
+  lastPointerTouchAt=Date.now();
+  if(pointerTouches[e.pointerId]) pointerTouches[e.pointerId]={x:e.clientX,y:e.clientY};
+  const n=Object.keys(pointerTouches).length;
+  if(n>=2){ if(gMode!=='pinch') startPointerPinch(); else doPointerPinch(); return; }
+  if(gMode!=='pan') return;
+  tx=panAnchorTx+(e.clientX-panAnchorX);
+  ty=panAnchorTy+(e.clientY-panAnchorY);
+  clamp(); applyXform();
+},{passive:false});
+
+stage.addEventListener('pointerup', e=>{
+  if(e.pointerType!=='touch') return;
+  lastPointerTouchAt=Date.now();
+  delete pointerTouches[e.pointerId];
+  const n=Object.keys(pointerTouches).length;
+  if(n===0){ endGesture(); return; }
+  if(n===1&&gMode==='pinch'){
+    const id=Object.keys(pointerTouches)[0];
+    const rem=pointerTouches[id];
+    panAnchorX=rem.x; panAnchorY=rem.y; panAnchorTx=tx; panAnchorTy=ty;
+    gMode='pan';
+  }
+},{passive:false});
+
+stage.addEventListener('pointercancel', e=>{
+  if(e.pointerType!=='touch') return;
+  lastPointerTouchAt=Date.now();
+  delete pointerTouches[e.pointerId];
+  endGesture();
 },{passive:false});
 
 // ── Mouse: draw on canvas ──
