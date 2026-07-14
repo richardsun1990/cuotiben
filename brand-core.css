@@ -1,0 +1,47 @@
+:root{
+  --brand:#6C5CE7;
+  --brand-2:#8A74F4;
+  --brand-3:#A899FF;
+  --brand-soft:#F5F3FF;
+  --brand-soft-2:#EEE9FF;
+  --teal:#22C5A3;
+  --teal-dark:#10947C;
+  --ink:#1A1D29;
+  --text:#353957;
+  --muted:#7E849E;
+  --border:#E9EDF5;
+  --surface:#FFFFFF;
+  --danger:#FF6B6B;
+  --warning:#FFA726;
+  --success:#22C55E;
+  --info:#4C8DFF;
+  --card-shadow:0 2px 8px rgba(107,92,231,.06);
+  --module-shadow:0 8px 24px rgba(107,92,231,.10);
+  --hover-shadow:0 14px 34px rgba(107,92,231,.16);
+  --radius-card:12px;
+  --radius-module:18px;
+  --radius-input:10px;
+  --radius-pill:20px;
+  --brand-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Source Han Sans SC","Microsoft YaHei",sans-serif;
+  --number-font:Inter,"SF Pro Display",-apple-system,BlinkMacSystemFont,sans-serif;
+}
+
+html{scroll-behavior:smooth}
+body{font-family:var(--brand-font);color:var(--ink);background:#fbfbff}
+button,input,select,textarea{font-family:var(--brand-font)}
+button,a{transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,color .18s ease}
+button:hover,a:hover{transform:translateY(-1px)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(108,92,231,.18);outline-offset:2px}
+
+.brand img,.side-brand img,.eng-brand img,.profile img,.top-actions img,.eng-profile img{content:url("assets/brand-logo-brand.svg")}
+.brand img,.side-brand img,.eng-brand img{border-radius:16px;box-shadow:0 8px 20px rgba(108,92,231,.22)}
+.profile img,.top-actions img,.eng-profile img{border-radius:50%;box-shadow:0 4px 12px rgba(108,92,231,.14)}
+
+.home-hero:before,.home-hero:after,.welcome:before,.eng-hero:before,.eng-hero:after{
+  content:"🐾";position:absolute;color:#b9acf9;opacity:.35;filter:saturate(.6);pointer-events:none
+}
+.home-hero:before{left:36px;top:38px;font-size:28px;transform:rotate(-18deg)}
+.home-hero:after{left:46%;bottom:30px;font-size:24px;transform:rotate(18deg)}
+.welcome:before{right:38%;top:26px;font-size:22px}
+.eng-hero:before{right:38%;top:28px;font-size:22px;transform:rotate(-10deg)}
+.eng-hero:after{right:8%;bottom:20px;font-size:18px;transform:rotate(16deg)}
