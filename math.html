@@ -1,13 +1,154 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"><title>嘟嘟错题本 · 数学错题</title><link rel="stylesheet" href="math.css"><link rel="stylesheet" href="brand.css"></head><body>
-<div class="app-shell"><aside class="side"><a class="side-brand" href="index.html"><img src="assets/brand-logo-brand.svg"><div><h1>嘟嘟错题本</h1><p>错题不是终点，进步才是目标</p></div></a><nav><a class="nav-on" href="index.html">♔　学习中心</a><button onclick="setSubject('全部',this)">▣　错题本</button><button>▤　知识点库</button></nav><div class="side-title">科目</div><div id="subjectNav"></div><div class="side-plan"><h3>学习计划</h3><p>本周目标 <b id="weekGoalText">0 / 40 题</b></p><div><i id="weekGoalBar"></i></div><p>连续打卡 <b id="mathStreak">0 天</b></p></div><img class="side-cat" src="assets/english-side-cat-brand.svg"><button class="settings">⚙ 设置</button></aside>
-<main class="math-main"><header class="math-top"><div></div><div class="top-actions"><button>♔ 会员中心</button><button>♧</button><div><img src="assets/brand-logo-brand.svg">小可爱　⌄</div></div></header><div class="math-content">
-<section class="welcome"><div><h2>下午好，小可爱！今天又是进步的一天呀～</h2><p>坚持整理错题，知识不再遗漏，嘟嘟为你加油！💪</p></div><div class="speech">每一道错题，<br>都是通往正确的阶梯哦～</div><img src="assets/math-banner-cat-brand.svg"></section>
-<section class="stat-grid"><div class="stat"><span>错题总数</span><b id="totalCount">0<small>题</small></b><em>较上周 <i>−5 ↓</i></em><strong><img src="assets/icon-math.svg" alt=""></strong></div><div class="stat"><span>未掌握</span><b id="wrongCount">0<small>题</small></b><em>需要继续努力哦</em><strong class="red"><img src="assets/icon-pencil.svg" alt=""></strong></div><div class="stat"><span>复习中</span><b id="reviewCount">0<small>题</small></b><em>继续加油！</em><strong class="orange"><img src="assets/icon-books.svg" alt=""></strong></div><div class="stat"><span>已掌握</span><b id="doneCount">0<small>题</small></b><em>真棒！继续保持</em><strong class="green"><img src="assets/icon-trophy.svg" alt=""></strong></div><div class="stat"><span>正确率</span><b id="mathAccuracy">0%</b><em>较上周 <i>+8% ↑</i></em><strong class="line"><img src="assets/icon-shield.svg" alt=""></strong></div></section>
-<section class="quick-actions"><button onclick="document.getElementById('photoInput').click()"><b>📷</b><span>拍照录入<small>一键录入错题</small></span></button><button onclick="openAdd()"><b><img src="assets/icon-pencil.svg" alt=""></b><span>手动录入<small>逐题输入错题</small></span></button><button onclick="document.getElementById('importInput').click()"><b><img src="assets/icon-books.svg" alt=""></b><span>从试卷导入<small>智能识别导入</small></span></button><button onclick="printMistakes()"><b><img src="assets/icon-shield.svg" alt=""></b><span>错题打印<small>导出打印复习</small></span></button><button onclick="makePaper()"><b><img src="assets/icon-trophy.svg" alt=""></b><span>错题组卷<small>生成练习试卷</small></span></button><div class="challenge"><img src="assets/cat-cheer-brand.svg" alt="加油">今日已有 <b id="todayChallenges">0 人</b><br>战胜错题，加油呀！</div></section>
-<section class="filter-row"><div class="tabs"><button class="on" data-status="all" onclick="setStatus('all',this)">全部错题 <b id="tabAll">(0)</b></button><button data-status="wrong" onclick="setStatus('wrong',this)">未掌握 <b id="tabWrong">(0)</b></button><button data-status="review" onclick="setStatus('review',this)">复习中 <b id="tabReview">(0)</b></button><button data-status="done" onclick="setStatus('done',this)">已掌握 <b id="tabDone">(0)</b></button></div><select id="chapterFilter" onchange="render()"><option value="all">全部章节</option></select><select id="typeFilter" onchange="render()"><option value="all">全部题型</option><option value="有答案">有答案</option><option value="无答案">无答案</option><option value="已作答">已作答</option></select><select id="sortFilter" onchange="render()"><option value="desc">时间排序</option><option value="asc">最早优先</option></select><div class="search">⌕<input id="searchInput" placeholder="搜索题目/知识点…" oninput="render()"></div></section>
-<div class="question-grid" id="questionGrid"></div>
-</div></main></div>
-<input hidden type="file" accept="image/*" capture="environment" id="photoInput" onchange="handlePhoto(this)"><input hidden type="file" accept=".json" id="importInput" onchange="importJson(this)">
-<div class="overlay" id="editOverlay" onclick="if(event.target===this)closeEdit()"><section class="modal"><header><h2 id="modalTitle">新增错题</h2><button onclick="closeEdit()">×</button></header><label>题目内容<textarea id="fQ" rows="5" placeholder="输入题目，或从照片录入"></textarea></label><label>正确答案 / 解题思路<textarea id="fA" rows="3"></textarea></label><div class="two"><label>科目<select id="fSubject"><option>数学</option><option>英语</option><option>语文</option><option>物理</option><option>化学</option><option>生物</option><option>历史</option><option>地理</option><option>其他</option></select></label><label>知识点 / 章节<input id="fTag" placeholder="如：一元一次方程"></label></div><label>出错原因<input id="fReason" placeholder="粗心 / 公式记错 / 概念不清"></label><label>掌握状态<select id="fStatus"><option value="wrong">未掌握</option><option value="review">复习中</option><option value="done">已掌握</option></select></label><img id="photoPreview"><button class="save" onclick="saveQuestion()">保存错题</button></section></div>
-<div class="overlay" id="drawOverlay"><section class="draw-modal"><header><h2 id="drawTitle">手写作答</h2><div><button onclick="setDrawMode('pen')">✎ 钢笔</button><button onclick="setDrawMode('eraser')">□ 橡皮</button><button onclick="undoStroke()">↶ 撤销</button><button onclick="clearCanvas()">清除</button><button onclick="closeDraw()">×</button></div></header><canvas id="answerCanvas"></canvas><footer><button onclick="closeDraw()">取消</button><button class="save" onclick="saveDrawing()">保存作答 ✓</button></footer></section></div>
-<div class="toast" id="toast"></div><script src="math.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>嘟嘟错题本 · 数学错题</title>
+  <link rel="stylesheet" href="math.css">
+  <link rel="stylesheet" href="brand.css"><link rel="stylesheet" href="workflow.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="side">
+    <a class="side-brand" href="index.html">
+      <img src="assets/brand-logo-refined.svg" alt="嘟嘟错题本">
+      <div><h1>嘟嘟错题本</h1><p>错题不是终点，进步才是目标</p></div>
+    </a>
+    <nav class="module-nav" aria-label="学习模块">
+      <a href="index.html">⌂　学习中心</a>
+      <a class="on" href="math.html"><img src="assets/icon-math.svg" alt="">数学错题</a>
+      <a href="english.html"><img src="assets/icon-english.svg" alt="">英语学习</a>
+    </nav>
+    <div class="side-summary">
+      <h3>数学错题本</h3>
+      <p>只记录数学错题，按掌握状态持续复习。</p>
+      <div><span>全部错题</span><b id="sideTotal">0 题</b></div>
+      <div><span>待加强</span><b id="sideWeak">0 题</b></div>
+    </div>
+    <div class="side-plan">
+      <h3>本周学习计划</h3>
+      <p>整理与复习 <b id="weekGoalText">0 / 40 题</b></p>
+      <div><i id="weekGoalBar"></i></div>
+      <p>连续学习 <b id="mathStreak">0 天</b></p>
+    </div>
+    <img class="side-cat" src="assets/cat-sleep.png" alt="陪伴学习的小猫">
+  </aside>
+
+  <main class="math-main">
+    <header class="math-top">
+      <div class="page-heading"><b>数学错题</b><span>录入、筛选、批量管理与组卷复习</span></div>
+      <nav class="mobile-module-nav"><a href="index.html">首页</a><a class="on" href="math.html">数学</a><a href="english.html">英语</a></nav>
+      <div class="top-profile"><img src="assets/brand-logo-refined.svg" alt="">嘟嘟同学</div>
+    </header>
+
+    <div class="math-content">
+      <section class="welcome">
+        <div><h2>今天也来攻克几道数学错题吧！</h2><p>把不会的题整理清楚，再用组卷功能集中练习。</p></div>
+        <div class="speech">每一道错题，<br>都是通往正确的阶梯哦～</div>
+        <img src="assets/math-banner-cat-refined.svg" alt="嘟嘟猫">
+      </section>
+
+      <section class="stat-grid">
+        <div class="stat"><span>错题总数</span><b id="totalCount">0<small>题</small></b><em>数学错题累计</em><strong><img src="assets/icon-math.svg" alt=""></strong></div>
+        <div class="stat"><span>未掌握</span><b id="wrongCount">0<small>题</small></b><em>优先加入练习</em><strong class="red"><img src="assets/icon-pencil.svg" alt=""></strong></div>
+        <div class="stat"><span>复习中</span><b id="reviewCount">0<small>题</small></b><em>继续巩固</em><strong class="orange"><img src="assets/icon-books.svg" alt=""></strong></div>
+        <div class="stat"><span>已掌握</span><b id="doneCount">0<small>题</small></b><em>保持定期复习</em><strong class="green"><img src="assets/icon-trophy.svg" alt=""></strong></div>
+        <div class="stat"><span>掌握率</span><b id="mathAccuracy">0%</b><em>已掌握 ÷ 全部</em><strong class="line"><img src="assets/icon-shield.svg" alt=""></strong></div>
+      </section>
+
+      <section class="quick-actions">
+        <button onclick="openAdd()"><b><img src="assets/icon-pencil.svg" alt=""></b><span>手动录入<small>添加一道数学错题</small></span></button>
+        <button onclick="enableSelection()"><b>☑</b><span>选择管理<small>批量编辑或删除</small></span></button>
+        <button onclick="openPrintPreview()"><b>▣</b><span>错题打印<small>打印当前筛选结果</small></span></button>
+        <button onclick="openPaperBuilder()"><b><img src="assets/icon-books.svg" alt=""></b><span>错题组卷<small>选择题目生成练习卷</small></span></button>
+        <div class="challenge"><img src="assets/cat-cheer-refined.svg" alt="加油"><span>今天已整理或复习<br><b id="todayChallenges">0 题</b></span></div>
+      </section>
+
+      <section class="filter-row">
+        <div class="tabs">
+          <button class="on" data-status="all" onclick="setStatus('all',this)">全部错题 <b id="tabAll">(0)</b></button>
+          <button data-status="wrong" onclick="setStatus('wrong',this)">未掌握 <b id="tabWrong">(0)</b></button>
+          <button data-status="review" onclick="setStatus('review',this)">复习中 <b id="tabReview">(0)</b></button>
+          <button data-status="done" onclick="setStatus('done',this)">已掌握 <b id="tabDone">(0)</b></button>
+        </div>
+        <select id="chapterFilter" onchange="render()"><option value="all">全部章节</option></select>
+        <select id="typeFilter" onchange="render()"><option value="all">全部内容</option><option value="有答案">有答案</option><option value="无答案">无答案</option><option value="已作答">已手写作答</option></select>
+        <select id="sortFilter" onchange="render()"><option value="desc">最新优先</option><option value="asc">最早优先</option></select>
+        <div class="search">⌕<input id="searchInput" placeholder="搜索题目、知识点或原因…" oninput="render()"></div>
+      </section>
+
+      <section class="batch-bar" id="batchBar" aria-live="polite">
+        <div><b id="selectedCount">已选择 0 题</b><span>勾选题目后可统一管理或直接组卷</span></div>
+        <button onclick="selectAllFiltered()">全选当前结果</button>
+        <select id="batchStatus" onchange="applyBatchStatus(this.value)">
+          <option value="">批量修改状态</option>
+          <option value="wrong">设为未掌握</option>
+          <option value="review">设为复习中</option>
+          <option value="done">设为已掌握</option>
+        </select>
+        <button onclick="openBatchEdit()">批量编辑</button>
+        <button onclick="openPaperBuilder('selected')">用所选题组卷</button>
+        <button class="danger" onclick="deleteSelected()">删除所选</button>
+        <button class="ghost" onclick="clearSelection()">取消选择</button>
+      </section>
+
+      <div class="question-grid" id="questionGrid"></div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="editOverlay" onclick="if(event.target===this)closeEdit()">
+  <section class="modal">
+    <header><div><h2 id="modalTitle">新增数学错题</h2><p>只需填写题目，其他信息可按需要补充。</p></div><button onclick="closeEdit()">×</button></header>
+    <label>题目内容 *<textarea id="fQ" rows="5" placeholder="输入数学题目"></textarea></label>
+    <label>正确答案 / 解题思路<textarea id="fA" rows="3" placeholder="填写正确答案、关键步骤或易错点"></textarea></label>
+    <div class="two">
+      <label>知识点 / 章节<input id="fTag" placeholder="如：一元一次方程"></label>
+      <label>掌握状态<select id="fStatus"><option value="wrong">未掌握</option><option value="review">复习中</option><option value="done">已掌握</option></select></label>
+    </div>
+    <label>出错原因<input id="fReason" placeholder="如：计算粗心、公式记错、概念不清"></label>
+    <button class="save" onclick="saveQuestion()">保存错题</button>
+  </section>
+</div>
+
+<div class="overlay" id="batchOverlay" onclick="if(event.target===this)closeBatchEdit()">
+  <section class="modal compact-modal">
+    <header><div><h2>批量编辑所选错题</h2><p>留空的项目不会修改。</p></div><button onclick="closeBatchEdit()">×</button></header>
+    <label>统一知识点 / 章节<input id="batchTag" placeholder="留空表示不修改"></label>
+    <label>统一出错原因<input id="batchReason" placeholder="留空表示不修改"></label>
+    <label>统一掌握状态<select id="batchEditStatus"><option value="">不修改状态</option><option value="wrong">未掌握</option><option value="review">复习中</option><option value="done">已掌握</option></select></label>
+    <button class="save" onclick="saveBatchEdit()">应用到所选错题</button>
+  </section>
+</div>
+
+<div class="overlay" id="paperBuilderOverlay" onclick="if(event.target===this)closePaperBuilder()">
+  <section class="modal compact-modal">
+    <header><div><h2>生成数学错题练习卷</h2><p>选择题目范围和题量，生成后可预览与打印。</p></div><button onclick="closePaperBuilder()">×</button></header>
+    <label>练习卷标题<input id="paperTitle" value="数学错题专项练习"></label>
+    <label>题目来源<select id="paperSource" onchange="updatePaperAvailability()"><option value="selected">已勾选的题目</option><option value="filtered">当前筛选结果</option><option value="wrong">全部未掌握题目</option><option value="all">全部数学错题</option></select></label>
+    <label>题目数量<input id="paperCount" type="number" min="1" value="10"></label>
+    <label class="check-label"><input id="paperIncludeAnswer" type="checkbox"> 在练习卷末尾附上答案与解析</label>
+    <div class="paper-source-note" id="paperSourceNote"></div>
+    <button class="save" onclick="generatePaper()">生成练习卷</button>
+  </section>
+</div>
+
+<div class="overlay paper-overlay" id="paperOverlay">
+  <section class="paper-shell">
+    <header class="paper-actions"><button onclick="closePaperPreview()">返回编辑</button><button onclick="printGeneratedPaper()">打印练习卷</button></header>
+    <article id="paperContent" class="paper-content"></article>
+  </section>
+</div>
+
+<div class="overlay" id="drawOverlay">
+  <section class="draw-modal">
+    <header><h2 id="drawTitle">手写作答</h2><div><button onclick="setDrawMode('pen')">✎ 钢笔</button><button onclick="setDrawMode('eraser')">□ 橡皮</button><button onclick="undoStroke()">↶ 撤销</button><button onclick="clearCanvas()">清除</button><button onclick="closeDraw()">×</button></div></header>
+    <canvas id="answerCanvas"></canvas>
+    <footer><button onclick="closeDraw()">取消</button><button class="save" onclick="saveDrawing()">保存作答 ✓</button></footer>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="math.js"></script>
+</body>
+</html>
