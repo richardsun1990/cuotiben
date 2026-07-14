@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
   <title>嘟嘟错题本 · 数学错题</title>
   <link rel="stylesheet" href="math.css">
-  <link rel="stylesheet" href="brand.css"><link rel="stylesheet" href="workflow.css">
+  <link rel="stylesheet" href="brand.css">
+  <link rel="stylesheet" href="workflow.css">
+  <link rel="stylesheet" href="data-transfer.css">
 </head>
 <body>
 <div class="app-shell">
@@ -38,7 +40,11 @@
     <header class="math-top">
       <div class="page-heading"><b>数学错题</b><span>录入、筛选、批量管理与组卷复习</span></div>
       <nav class="mobile-module-nav"><a href="index.html">首页</a><a class="on" href="math.html">数学</a><a href="english.html">英语</a></nav>
-      <div class="top-profile"><img src="assets/brand-logo-brand.svg" alt="">嘟嘟同学</div>
+      <div class="top-data-tools" aria-label="数学数据管理">
+        <button class="data-tool-btn" type="button" onclick="openMathImport()" title="导入数学错题备份"><i>⇧</i><span>导入数据</span></button>
+        <button class="data-tool-btn" type="button" onclick="exportMathData()" title="导出数学错题备份"><i>⇩</i><span>导出备份</span></button>
+        <div class="top-profile"><img src="assets/brand-logo-brand.svg" alt="">嘟嘟同学</div>
+      </div>
     </header>
 
     <div class="math-content">
@@ -150,5 +156,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="math.js"></script>
+<script src="data-transfer.js"></script>
 </body>
 </html>
