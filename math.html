@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="workflow.css">
   <link rel="stylesheet" href="data-transfer.css">
   <link rel="stylesheet" href="responsive.css">
+  <link rel="stylesheet" href="profile.css">
 </head>
 <body>
 <div class="app-shell">
@@ -44,7 +45,7 @@
       <div class="top-data-tools" aria-label="数学数据管理">
         <button class="data-tool-btn" type="button" onclick="openMathImport()" title="导入数学错题备份"><i>⇧</i><span>导入数据</span></button>
         <button class="data-tool-btn" type="button" onclick="exportMathData()" title="导出数学错题备份"><i>⇩</i><span>导出备份</span></button>
-        <div class="top-profile"><img src="assets/brand-logo-brand.svg" alt="">嘟嘟同学</div>
+        <button class="top-profile" type="button" data-profile-trigger onclick="openProfileSettings()"><img src="assets/brand-logo-brand.svg" alt=""><span data-user-name>嘟嘟同学</span></button>
       </div>
     </header>
 
@@ -158,5 +159,6 @@
 <div class="toast" id="toast"></div>
 <script src="math.js"></script>
 <script src="data-transfer.js"></script>
+<script src="profile-progress.js"></script>
 </body>
 </html>
