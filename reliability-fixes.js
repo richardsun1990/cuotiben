@@ -5,6 +5,21 @@
   const DAILY_KEY='dudu_vocab_daily_v1';
   const safe=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
 
+  function removeUntouchedDemoWords(){
+    const list=safe(WORD_KEY,[]);
+    const demos=new Set(['apple','beautiful','question']);
+    const untouched=Array.isArray(list)&&list.length===3&&list.every(item=>demos.has(item.word)&&item.source==='示例词库'&&(Number(item.seen)||0)===0);
+    if(!untouched)return;
+    localStorage.setItem(WORD_KEY,'[]');
+    localStorage.setItem(DAILY_KEY,'{}');
+    try{
+      if(typeof words!=='undefined'&&Array.isArray(words))words.splice(0,words.length);
+      if(typeof daily!=='undefined'&&daily&&typeof daily==='object')Object.keys(daily).forEach(key=>delete daily[key]);
+      if(typeof persist==='function')persist();
+      if(typeof render==='function')render();
+    }catch(error){console.error(error)}
+  }
+
   function syncEnglishDailyMemory(){
     const wordList=safe(WORD_KEY,[]),stored=safe(DAILY_KEY,{});
     if(!Array.isArray(wordList)||!stored||typeof stored!=='object')return;
@@ -62,6 +77,23 @@
     }
   }
 
+  function patchClearAll(){
+    window.clearAllDuduData=function(){
+      if(!confirm('确定清空全部数学错题、英语单词和学习记录吗？'))return;
+      if(!confirm('此操作无法撤销。建议先导出完整备份，再次确认清空？'))return;
+      [
+        'cuoti_v3','dudu_vocab_v1','dudu_vocab_v2','dudu_vocab_history_v2','dudu_vocab_daily_v1','dudu_vocab_settings_v1',
+        'dudu_user_profile_v1','dudu_math_activity_v1','dudu_activity_log_v1','dudu_last_backup_at_v1'
+      ].forEach(key=>localStorage.removeItem(key));
+      localStorage.setItem(MATH_KEY,'[]');
+      localStorage.setItem(WORD_KEY,'[]');
+      localStorage.setItem('dudu_vocab_history_v2','[]');
+      localStorage.setItem(DAILY_KEY,'{}');
+      localStorage.setItem('dudu_math_activity_v1',JSON.stringify({version:1,entries:[]}));
+      location.reload();
+    };
+  }
+
   function patchStorageWarning(){
     try{
       const used=Object.keys(localStorage).reduce((sum,key)=>sum+(localStorage.getItem(key)||'').length*2,0);
@@ -72,6 +104,6 @@
     }catch(error){console.error(error)}
   }
 
-  function init(){syncEnglishDailyMemory();stripLegacyDrawings();patchMathImport();patchStorageWarning()}
+  function init(){removeUntouchedDemoWords();syncEnglishDailyMemory();stripLegacyDrawings();patchMathImport();patchClearAll();patchStorageWarning()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
