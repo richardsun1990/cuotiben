@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#6C5CE7">
+  <meta name="application-name" content="嘟嘟错题本">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="嘟嘟错题本">
   <title>嘟嘟错题本 · 英语学习</title>
-  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="site.webmanifest"><meta name="theme-color" content="#6C5CE7">
+  <link rel="icon" type="image/svg+xml" href="assets/app-icon.svg">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/app-icon-512.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="english.css">
   <link rel="stylesheet" href="brand.css">
   <link rel="stylesheet" href="workflow.css">
@@ -16,7 +23,7 @@
 <body>
 <div class="eng-shell">
   <aside class="eng-side">
-    <a class="eng-brand" href="index.html"><img src="assets/brand-logo-brand.svg"><div><h1>嘟嘟错题本</h1><p>错题不是终点，进步才是目标</p></div></a>
+    <a class="eng-brand" href="index.html"><img src="assets/brand-logo-brand.svg" alt="嘟嘟错题本"><div><h1>嘟嘟错题本</h1><p>错题不是终点，进步才是目标</p></div></a>
     <nav class="module-nav" aria-label="学习模块"><a href="index.html">⌂　学习中心</a><a href="math.html"><img src="assets/icon-math.svg" alt="">数学错题</a><a class="on" href="english.html"><img src="assets/icon-english.svg" alt="">英语学习 <b id="sideCount">0词</b></a></nav>
     <div class="goal"><h3>学习目标</h3><p>先听准，再分音节；先掌握规则拼读，再单独记住少数不规则字母。</p><div class="goal-line"><span>今日新词：<b id="goalProgress">0 / 8 词</b></span><button class="goal-setting-btn" type="button" data-profile-trigger onclick="openProfileSettings()"><b data-english-daily-goal>8词/天</b><small>设置</small></button><input type="hidden" id="dailyLimit" value="8"></div><div class="goal-bar"><i id="todayBar"></i></div><small id="todayProgress">今日练习 0 次</small></div>
     <img class="eng-side-cat" src="assets/cats/side-sleep.svg" alt="陪伴学习的小猫">
@@ -26,38 +33,19 @@
     <header class="eng-top eng-top-simple">
       <div class="eng-page-title"><b>英语学习</b><span>自然拼读 · 多轮记忆</span></div>
       <nav class="eng-mobile-nav" aria-label="移动端学习模块"><a href="index.html">首页</a><a href="math.html">数学</a><a class="on" href="english.html">英语</a></nav>
-      <div class="top-data-tools" aria-label="英语数据管理">
-        <button class="data-tool-btn" type="button" onclick="openEnglishBackupImport()" title="导入英语学习备份"><i>⇧</i><span>导入备份</span></button>
-        <button class="data-tool-btn" type="button" onclick="exportEnglishData()" title="导出英语学习备份"><i>⇩</i><span>导出备份</span></button>
-        <button class="eng-profile" type="button" data-profile-trigger onclick="openProfileSettings()"><img src="assets/brand-logo-brand.svg"><span data-user-name>嘟嘟同学</span></button>
-      </div>
+      <div class="top-data-tools" aria-label="英语数据管理"><button class="data-tool-btn" type="button" onclick="openEnglishBackupImport()" title="导入英语学习备份"><i>⇧</i><span>导入备份</span></button><button class="data-tool-btn" type="button" onclick="exportEnglishData()" title="导出英语学习备份"><i>⇩</i><span>导出备份</span></button><button class="eng-profile" type="button" data-profile-trigger onclick="openProfileSettings()"><img src="assets/brand-logo-brand.svg" alt=""><span data-user-name>嘟嘟同学</span></button></div>
     </header>
 
     <div class="eng-content">
-      <section class="eng-hero">
-        <div>
-          <h2>只输入一个英文单词，其他交给系统。</h2>
-          <p>自动查询中文意思、音标和发音，并按音节与常见字母组合拆解。孩子通过“听音—分音节—拼读块—听写”形成拼写能力。</p>
-          <div class="eng-add">
-            <input id="wordInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="输入英文单词，如 beautiful" onkeydown="if(event.key==='Enter')lookupWord()">
-            <select id="sourceInput"><option>手动添加</option><option>课本</option><option>老师词表</option><option>英语错题</option></select>
-            <button id="lookupBtn" onclick="lookupWord()">智能添加一个</button>
-            <button class="batch-open-btn" type="button" onclick="openEnglishBatchImport()">批量导入</button>
-          </div>
-          <small>⌖ 可以一个个智能添加，也可以批量粘贴或上传老师词表</small>
-        </div>
-        <img src="assets/cats/english-study.svg" alt="戴耳机读书的小猫">
-      </section>
-
-      <section class="eng-stats"><div><strong><img src="assets/icon-books.svg" alt=""></strong><b id="dueCount">0</b><span>今天复习<small>坚持就是胜利！💪</small></span></div><div><strong class="orange"><img src="assets/icon-trophy.svg" alt=""></strong><b id="masteredCount">0</b><span>基本掌握<small>加油复习哦～</small></span></div><div><strong class="star"><img src="assets/cats/cheer.svg" alt=""></strong><b id="weakCount">0</b><span>不熟悉词<small>重点强化中</small></span></div><div><strong class="chart"><img src="assets/icon-shield.svg" alt=""></strong><b id="recentAccuracy">—</b><span>最近听写正确率<small>仅统计听音拼写</small></span></div><span hidden id="newCount"></span><span hidden id="streakCount"></span></section>
+      <section class="eng-hero"><div><h2>只输入一个英文单词，其他交给系统。</h2><p>自动查询中文意思、音标和发音，并按音节与常见字母组合拆解。孩子通过“听音—分音节—拼读块—听写”形成拼写能力。</p><div class="eng-add"><input id="wordInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="输入英文单词，如 beautiful" onkeydown="if(event.key==='Enter')lookupWord()"><select id="sourceInput"><option>手动添加</option><option>课本</option><option>老师词表</option><option>英语错题</option></select><button id="lookupBtn" onclick="lookupWord()">智能添加一个</button><button class="batch-open-btn" type="button" onclick="openEnglishBatchImport()">批量导入</button></div><small>⌖ 可以一个个智能添加，也可以批量粘贴或上传老师词表</small></div><img src="assets/cats/english-study.svg" alt="戴耳机学习英语的小猫"></section>
+      <section class="eng-stats"><div><strong><img src="assets/icon-books.svg" alt=""></strong><b id="dueCount">0</b><span>今天复习<small>坚持就是胜利！💪</small></span></div><div><strong class="orange"><img src="assets/icon-trophy.svg" alt=""></strong><b id="masteredCount">0</b><span>基本掌握<small>加油复习哦～</small></span></div><div><strong class="star"><img src="assets/cats/cheer.svg" alt=""></strong><b id="weakCount">0</b><span>不熟悉词<small>重点强化中</small></span></div><div><strong class="chart"><img src="assets/icon-shield.svg" alt=""></strong><b id="recentAccuracy">—</b><span>最近听写正确率<small>只统计听音拼写</small></span></div><span hidden id="newCount"></span><span hidden id="streakCount"></span></section>
       <section class="mode-strip"><button onclick="startMode('new')"><b>🌱 今日新词</b><span id="newModeCount">0 个可学</span></button><button onclick="startMode('weak')"><b>🔥 不熟悉词</b><span id="weakModeCount">0 个待强化</span></button><button onclick="startMode('due')"><b>⏰ 到期复习</b><span id="dueModeCount">0 个到期</span></button><button class="mix" onclick="startMode('mix')"><b>🧠 智能混合</b><span id="mixModeCount">智能安排</span></button></section>
-      <section class="words-head"><div class="words-title"><img src="assets/cats/side-sleep.svg" alt=""><div><h2>我的单词</h2><p>红色拼读块表示需要额外记忆的特殊拼写。</p></div></div><div class="word-tools"><div class="search">⌕<input id="searchInput" placeholder="搜索单词" oninput="render()"></div><button class="dictation" onclick="startMode('mix')">开始今日听写</button><div class="filters"><button class="filter-btn on" onclick="setFilter('all',this)">全部状态</button><button class="filter-btn" onclick="setFilter('new',this)">未学习</button><button class="filter-btn" onclick="setFilter('weak',this)">不熟悉</button><button class="filter-btn" onclick="setFilter('master',this)">已掌握</button></div></div></section>
+      <section class="words-head"><div class="words-title"><img src="assets/cats/cat-book.svg" alt=""><div><h2>我的单词</h2><p>红色拼读块表示需要额外记忆的特殊拼写。</p></div></div><div class="word-tools"><div class="search">⌕<input id="searchInput" placeholder="搜索单词" oninput="render()"></div><button class="dictation" onclick="startMode('mix')">开始今日听写</button><div class="filters"><button class="filter-btn on" onclick="setFilter('all',this)">全部状态</button><button class="filter-btn" onclick="setFilter('new',this)">未学习</button><button class="filter-btn" onclick="setFilter('weak',this)">不熟悉</button><button class="filter-btn" onclick="setFilter('master',this)">已掌握</button></div></div></section>
       <div class="cards" id="wordCards"></div>
     </div>
   </main>
 </div>
-
-<div class="lookup" id="lookupSheet" onclick="if(event.target===this)closeLookup()"><section class="sheet"><div class="sheet-head"><h2>自动识别结果</h2><button class="close" onclick="closeLookup()">✕</button></div><div class="sheet-body" id="lookupBody"></div></section></div>
+<div class="lookup" id="lookupSheet" onclick="if(event.target===this)closeLookup()"><section class="sheet"><div class="sheet-head"><h2>自动识别结果</h2><button class="close" aria-label="关闭" onclick="closeLookup()">✕</button></div><div class="sheet-body" id="lookupBody"></div></section></div>
 <div class="study" id="studyPage"><div class="study-top"><button class="ghost" onclick="confirmExitStudy()">返回</button><div class="study-title" id="studyTitle">单词学习</div><div class="progress"><i id="progressBar"></i></div><span id="counter"></span></div><div class="study-body"><div class="flash"><div class="phase" id="phaseLabel"></div><div id="activityArea"></div></div></div></div>
 <div class="toast" id="toast"></div>
 <script src="english-core.js"></script>
