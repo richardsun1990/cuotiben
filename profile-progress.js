@@ -23,6 +23,31 @@
   function getEnglishSettings(){return {dailyLimit:8,...safe(ENGLISH_SETTINGS_KEY,{})}}
   function notify(message){if(typeof window.toast==='function')window.toast(message);else alert(message)}
 
+  function ensureAppMetadata(){
+    const head=document.head;
+    const addLink=(key,attrs)=>{
+      if(head.querySelector(`link[data-dudu-app="${key}"]`))return;
+      const link=document.createElement('link');link.dataset.duduApp=key;
+      Object.entries(attrs).forEach(([name,value])=>link.setAttribute(name,value));head.appendChild(link);
+    };
+    const addMeta=(name,content)=>{
+      let meta=head.querySelector(`meta[name="${name}"]`);
+      if(!meta){meta=document.createElement('meta');meta.setAttribute('name',name);head.appendChild(meta)}
+      meta.setAttribute('content',content);
+    };
+    addLink('favicon-svg',{rel:'icon',type:'image/svg+xml',href:'assets/app-icon.svg'});
+    addLink('favicon-png',{rel:'icon',type:'image/png',sizes:'512x512',href:'assets/app-icon-512.png'});
+    addLink('apple-touch',{rel:'apple-touch-icon',sizes:'512x512',href:'apple-touch-icon.png'});
+    addLink('manifest',{rel:'manifest',href:'site.webmanifest'});
+    addMeta('theme-color','#6C5CE7');
+    addMeta('application-name','嘟嘟错题本');
+    addMeta('mobile-web-app-capable','yes');
+    addMeta('apple-mobile-web-app-capable','yes');
+    addMeta('apple-mobile-web-app-status-bar-style','default');
+    addMeta('apple-mobile-web-app-title','嘟嘟错题本');
+  }
+  ensureAppMetadata();
+
   function ensureProfileModal(){
     if(document.getElementById('profileOverlay'))return;
     const overlay=document.createElement('div');overlay.id='profileOverlay';overlay.className='profile-overlay';

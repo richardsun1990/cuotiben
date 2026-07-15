@@ -1,0 +1,41 @@
+{
+  "id": "./index.html",
+  "name": "嘟嘟错题本",
+  "short_name": "嘟嘟错题本",
+  "description": "数学错题整理与英语自然拼读学习工具",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F5FF",
+  "theme_color": "#6C5CE7",
+  "icons": [
+    {
+      "src": "assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "数学错题",
+      "short_name": "数学",
+      "url": "./math.html",
+      "icons": [{"src": "assets/app-icon.svg", "sizes": "any", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "英语学习",
+      "short_name": "英语",
+      "url": "./english.html",
+      "icons": [{"src": "assets/app-icon.svg", "sizes": "any", "type": "image/svg+xml"}]
+    }
+  ]
+}
