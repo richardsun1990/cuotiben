@@ -16,7 +16,7 @@
   <aside class="eng-side">
     <a class="eng-brand" href="index.html"><img src="assets/brand-logo-brand.svg"><div><h1>嘟嘟错题本</h1><p>错题不是终点，进步才是目标</p></div></a>
     <nav class="module-nav" aria-label="学习模块"><a href="index.html">⌂　学习中心</a><a href="math.html"><img src="assets/icon-math.svg" alt="">数学错题</a><a class="on" href="english.html"><img src="assets/icon-english.svg" alt="">英语学习 <b id="sideCount">0词</b></a></nav>
-    <div class="goal"><h3>学习目标</h3><p>先听准，再分音节；先掌握规则拼读，再单独记住少数不规则字母。</p><div class="goal-line"><span>今日新词：<b id="goalProgress">0 / 8 词</b></span><select id="dailyLimit" onchange="saveSettings()"><option value="5">5词/天</option><option value="8">8词/天</option><option value="10">10词/天</option><option value="12">12词/天</option></select></div><div class="goal-bar"><i id="todayBar"></i></div><small id="todayProgress">今日练习 0 次</small></div>
+    <div class="goal"><h3>学习目标</h3><p>先听准，再分音节；先掌握规则拼读，再单独记住少数不规则字母。</p><div class="goal-line"><span>今日新词：<b id="goalProgress">0 / 8 词</b></span><button class="goal-setting-btn" type="button" data-profile-trigger onclick="openProfileSettings()"><b data-english-daily-goal>8词/天</b><small>设置</small></button><input type="hidden" id="dailyLimit" value="8"></div><div class="goal-bar"><i id="todayBar"></i></div><small id="todayProgress">今日练习 0 次</small></div>
     <img class="eng-side-cat" src="assets/english-side-cat-brand.svg">
   </aside>
 
