@@ -35,9 +35,9 @@
         <button type="button" class="profile-save">保存设置</button>
       </div>
     </section>`;
-    overlay.addEventListener('click',e=>{if(e.target===overlay)closeProfileSettings()});
-    overlay.querySelector('.profile-close').addEventListener('click',closeProfileSettings);
-    overlay.querySelector('.profile-save').addEventListener('click',saveProfileSettings);
+    overlay.addEventListener('click',e=>{if(e.target===overlay)window.closeProfileSettings()});
+    overlay.querySelector('.profile-close').addEventListener('click',window.closeProfileSettings);
+    overlay.querySelector('.profile-save').addEventListener('click',window.saveProfileSettings);
     document.body.appendChild(overlay);
   }
 
@@ -55,7 +55,7 @@
     if(!name){notify('请填写学习昵称');return}
     const grade=document.getElementById('profileGrade').value||'未设置';
     const mathWeeklyGoal=clamp(Number(document.getElementById('profileMathGoal').value)||40,1,200);
-    saveJson(PROFILE_KEY,{name,grade,mathWeeklyGoal});closeProfileSettings();applyProfile();updatePageStats();notify('学习资料已保存');
+    saveJson(PROFILE_KEY,{name,grade,mathWeeklyGoal});window.closeProfileSettings();applyProfile();updatePageStats();notify('学习资料已保存');
   };
 
   function applyProfile(){
