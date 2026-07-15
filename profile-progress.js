@@ -20,18 +20,22 @@
   function currentEpochDay(){return Math.floor(Date.now()/DAY)}
   function currentWeekStartEpochDay(){const d=new Date(),offset=(d.getDay()+6)%7;return currentEpochDay()-offset}
   function getProfile(){return {...DEFAULT_PROFILE,...safe(PROFILE_KEY,{})}}
+  function getEnglishSettings(){return {dailyLimit:8,...safe(ENGLISH_SETTINGS_KEY,{})}}
   function notify(message){if(typeof window.toast==='function')window.toast(message);else alert(message)}
 
   function ensureProfileModal(){
     if(document.getElementById('profileOverlay'))return;
     const overlay=document.createElement('div');overlay.id='profileOverlay';overlay.className='profile-overlay';
     overlay.innerHTML=`<section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
-      <header><div><h2 id="profileTitle">学习资料设置</h2><p>这些资料只保存在当前浏览器中。</p></div><button type="button" class="profile-close" aria-label="关闭">×</button></header>
+      <header><div><h2 id="profileTitle">学习资料与目标</h2><p>资料和目标只保存在当前浏览器中。</p></div><button type="button" class="profile-close" aria-label="关闭">×</button></header>
       <div class="profile-body">
         <label>学习昵称<input id="profileName" maxlength="12" placeholder="如：嘟嘟同学"></label>
         <label>所在年级<select id="profileGrade"><option value="未设置">未设置</option><option>一年级</option><option>二年级</option><option>三年级</option><option>四年级</option><option>五年级</option><option>六年级</option><option>初一</option><option>初二</option><option>初三</option></select></label>
-        <label>数学每周目标<div class="profile-number"><input id="profileMathGoal" type="number" min="1" max="200" inputmode="numeric"><span>题 / 周</span></div></label>
-        <div class="profile-note">英语每日新词目标仍可在英语页面左侧的“学习目标”中调整。</div>
+        <div class="profile-goal-grid">
+          <label>数学每周目标<div class="profile-number"><input id="profileMathGoal" type="number" min="1" max="200" step="1" inputmode="numeric"><span>题 / 周</span></div></label>
+          <label>英语每日新词<div class="profile-number"><input id="profileEnglishGoal" type="number" min="1" max="50" step="1" inputmode="numeric"><span>词 / 天</span></div></label>
+        </div>
+        <div class="profile-note">目标会同步用于首页本周进度、数学周计划和英语“今日新词”安排。</div>
         <button type="button" class="profile-save">保存设置</button>
       </div>
     </section>`;
@@ -42,10 +46,11 @@
   }
 
   window.openProfileSettings=function(){
-    ensureProfileModal();const profile=getProfile();
+    ensureProfileModal();const profile=getProfile(),english=getEnglishSettings();
     document.getElementById('profileName').value=profile.name;
     document.getElementById('profileGrade').value=profile.grade||'未设置';
     document.getElementById('profileMathGoal').value=profile.mathWeeklyGoal||40;
+    document.getElementById('profileEnglishGoal').value=english.dailyLimit||8;
     document.getElementById('profileOverlay').classList.add('open');document.body.classList.add('profile-modal-open');
     setTimeout(()=>document.getElementById('profileName').focus(),60);
   };
@@ -54,16 +59,22 @@
     const name=(document.getElementById('profileName').value||'').trim().slice(0,12);
     if(!name){notify('请填写学习昵称');return}
     const grade=document.getElementById('profileGrade').value||'未设置';
-    const mathWeeklyGoal=clamp(Number(document.getElementById('profileMathGoal').value)||40,1,200);
-    saveJson(PROFILE_KEY,{name,grade,mathWeeklyGoal});window.closeProfileSettings();applyProfile();updatePageStats();notify('学习资料已保存');
+    const mathWeeklyGoal=clamp(Math.round(Number(document.getElementById('profileMathGoal').value)||40),1,200);
+    const englishDailyGoal=clamp(Math.round(Number(document.getElementById('profileEnglishGoal').value)||8),1,50);
+    saveJson(PROFILE_KEY,{name,grade,mathWeeklyGoal});
+    saveJson(ENGLISH_SETTINGS_KEY,{...getEnglishSettings(),dailyLimit:englishDailyGoal});
+    const dailyInput=document.getElementById('dailyLimit');
+    if(dailyInput){dailyInput.value=String(englishDailyGoal);if(typeof window.saveSettings==='function')window.saveSettings()}
+    window.closeProfileSettings();applyProfile();updatePageStats();notify('学习资料和目标已保存');
   };
 
   function applyProfile(){
-    const profile=getProfile();
+    const profile=getProfile(),english=getEnglishSettings();
     document.querySelectorAll('[data-user-name]').forEach(el=>el.textContent=profile.name);
     document.querySelectorAll('[data-user-grade]').forEach(el=>el.textContent=profile.grade==='未设置'?'':profile.grade);
+    document.querySelectorAll('[data-english-daily-goal]').forEach(el=>el.textContent=`${english.dailyLimit}词/天`);
     document.querySelectorAll('[data-profile-trigger]').forEach(el=>{
-      el.setAttribute('title','修改学习资料');el.setAttribute('aria-label',`修改${profile.name}的学习资料`);
+      el.setAttribute('title','修改学习资料与目标');el.setAttribute('aria-label',`修改${profile.name}的学习资料与目标`);
     });
   }
 
@@ -109,7 +120,7 @@
   }
 
   function englishWeekSummary(){
-    const daily=safe(ENGLISH_DAILY_KEY,{}),settings={dailyLimit:8,...safe(ENGLISH_SETTINGS_KEY,{})};
+    const daily=safe(ENGLISH_DAILY_KEY,{}),settings=getEnglishSettings();
     const start=currentWeekStartEpochDay(),today=currentEpochDay();let newWords=0,activities=0;
     for(let d=start;d<=today;d++){const item=daily[String(d)]||{};newWords+=Number(item.newWords)||0;activities+=Number(item.activities)||0}
     const elapsed=today-start+1,target=Math.max(1,(Number(settings.dailyLimit)||8)*elapsed);
@@ -118,7 +129,8 @@
   }
   function updateEnglishStats(){
     if(!document.querySelector('.eng-shell'))return;
-    const summary=englishWeekSummary(),goal=document.getElementById('goalProgress'),bar=document.getElementById('todayBar'),text=document.getElementById('todayProgress');
+    const summary=englishWeekSummary(),goal=document.getElementById('goalProgress'),bar=document.getElementById('todayBar'),text=document.getElementById('todayProgress'),input=document.getElementById('dailyLimit');
+    if(input)input.value=String(summary.dailyLimit);
     if(goal)goal.textContent=`${summary.todayNewWords} / ${summary.dailyLimit} 词`;
     if(bar)bar.style.width=clamp(summary.todayNewWords/summary.dailyLimit*100,0,100)+'%';
     if(text)text.textContent=`今日练习 ${summary.todayActivities} 次`;
