@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="responsive.css">
   <link rel="stylesheet" href="profile.css">
   <link rel="stylesheet" href="reliability.css">
+  <link rel="stylesheet" href="asset-polish.css">
 </head>
 <body>
 <div class="app-shell">
@@ -27,7 +28,7 @@
     <nav class="module-nav" aria-label="学习模块"><a href="index.html">⌂　学习中心</a><a class="on" href="math.html"><img src="assets/icon-math.svg" alt="">数学错题</a><a href="english.html"><img src="assets/icon-english.svg" alt="">英语学习</a></nav>
     <div class="side-summary"><h3>数学错题本</h3><p>只记录数学错题，按掌握状态持续复习。</p><div><span>全部错题</span><b id="sideTotal">0 题</b></div><div><span>待加强</span><b id="sideWeak">0 题</b></div></div>
     <div class="side-plan"><h3>本周学习计划</h3><p>整理与复习 <b id="weekGoalText">0 / 40 题</b></p><div><i id="weekGoalBar"></i></div><p>连续学习 <b id="mathStreak">0 天</b></p></div>
-    <img class="side-cat" src="assets/cats/side-sleep.svg" alt="陪伴学习的小猫">
+    <img class="side-cat" src="assets/cats/side-sleep.png" alt="陪伴学习的小猫" width="320" height="190" loading="lazy" decoding="async">
   </aside>
 
   <main class="math-main">
@@ -38,9 +39,9 @@
     </header>
 
     <div class="math-content">
-      <section class="welcome"><div><h2>今天也来攻克几道数学错题吧！</h2><p>把不会的题整理清楚，再用组卷功能集中练习。</p></div><div class="speech">每一道错题，<br>都是通往正确的阶梯哦～</div><img src="assets/cats/math-banner.svg" alt="嘟嘟猫"></section>
+      <section class="welcome"><div><h2>今天也来攻克几道数学错题吧！</h2><p>把不会的题整理清楚，再用组卷功能集中练习。</p></div><div class="speech">每一道错题，<br>都是通往正确的阶梯哦～</div><img src="assets/cats/math-banner.png" alt="嘟嘟猫" width="560" height="448" decoding="async" fetchpriority="high"></section>
       <section class="stat-grid"><div class="stat"><span>错题总数</span><b id="totalCount">0<small>题</small></b><em>数学错题累计</em><strong><img src="assets/icon-math.svg" alt=""></strong></div><div class="stat"><span>未掌握</span><b id="wrongCount">0<small>题</small></b><em>优先加入练习</em><strong class="red"><img src="assets/icon-pencil.svg" alt=""></strong></div><div class="stat"><span>复习中</span><b id="reviewCount">0<small>题</small></b><em>继续巩固</em><strong class="orange"><img src="assets/icon-books.svg" alt=""></strong></div><div class="stat"><span>已掌握</span><b id="doneCount">0<small>题</small></b><em>保持定期复习</em><strong class="green"><img src="assets/icon-trophy.svg" alt=""></strong></div><div class="stat"><span>掌握率</span><b id="mathAccuracy">0%</b><em>已掌握 ÷ 全部</em><strong class="line"><img src="assets/icon-shield.svg" alt=""></strong></div></section>
-      <section class="quick-actions"><button onclick="openAdd()"><b><img src="assets/icon-pencil.svg" alt=""></b><span>手动录入<small>添加一道数学错题</small></span></button><button onclick="enableSelection()"><b>☑</b><span>选择管理<small>批量编辑或删除</small></span></button><button onclick="openPrintPreview()"><b>▣</b><span>错题打印<small>打印当前筛选结果</small></span></button><button onclick="openPaperBuilder()"><b><img src="assets/icon-books.svg" alt=""></b><span>错题组卷<small>生成练习卷并记录结果</small></span></button><div class="challenge"><img src="assets/cats/cheer.svg" alt="加油"><span>今天已整理或复习<br><b id="todayChallenges">0 题</b></span></div></section>
+      <section class="quick-actions"><button onclick="openAdd()"><b><img src="assets/icon-pencil.svg" alt=""></b><span>手动录入<small>添加一道数学错题</small></span></button><button onclick="enableSelection()"><b>☑</b><span>选择管理<small>批量编辑或删除</small></span></button><button onclick="openPrintPreview()"><b>▣</b><span>错题打印<small>打印当前筛选结果</small></span></button><button onclick="openPaperBuilder()"><b><img src="assets/icon-books.svg" alt=""></b><span>错题组卷<small>生成练习卷并记录结果</small></span></button><div class="challenge"><img src="assets/cats/cheer.png" alt="加油" width="190" height="231" loading="lazy" decoding="async"><span>今天已整理或复习<br><b id="todayChallenges">0 题</b></span></div></section>
 
       <section class="filter-row"><div class="tabs"><button class="on" data-status="all" onclick="setStatus('all',this)">全部错题 <b id="tabAll">(0)</b></button><button data-status="wrong" onclick="setStatus('wrong',this)">未掌握 <b id="tabWrong">(0)</b></button><button data-status="review" onclick="setStatus('review',this)">复习中 <b id="tabReview">(0)</b></button><button data-status="done" onclick="setStatus('done',this)">已掌握 <b id="tabDone">(0)</b></button></div><select id="chapterFilter" onchange="render()"><option value="all">全部章节</option></select><select id="typeFilter" onchange="render()"><option value="all">全部内容</option><option value="有答案">有答案</option><option value="无答案">无答案</option></select><select id="sortFilter" onchange="render()"><option value="created-desc">最近录入</option><option value="review-desc">最近复习</option><option value="created-asc">最早录入</option></select><div class="search">⌕<input id="searchInput" placeholder="搜索题目、知识点或原因…" oninput="render()"></div></section>
 
