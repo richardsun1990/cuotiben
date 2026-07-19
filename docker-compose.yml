@@ -1,0 +1,14 @@
+services:
+  dudu-cuotuiben:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: dudu-cuotuiben
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/data
+    environment:
+      DUDU_SYNC_TOKEN: ${DUDU_SYNC_TOKEN:-dudu-local-sync}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
