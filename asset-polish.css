@@ -1,8 +1,114 @@
 /* Transparent PNG illustration integration */
-.hero-art,.left-cat,.right-cat,.side-cat,.eng-side-cat,.welcome img,.eng-hero>img,.challenge img,.eng-stats strong.star img,.words-title>img{object-fit:contain;background:transparent!important;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 14px 22px rgba(77,64,143,.14))}
-.hero-art{content:url("assets/cats/home-study.png")!important}.left-cat,.side-cat,.eng-side-cat{content:url("assets/cats/side-sleep.png")!important}.right-cat,.challenge img,.eng-stats strong.star img{content:url("assets/cats/cheer.png")!important}.welcome img{content:url("assets/cats/math-banner.png")!important}.eng-hero>img{content:url("assets/cats/english-study.png")!important}.words-title>img{content:url("assets/cats/cat-book.png")!important}
-.hero-art,.welcome img,.eng-hero>img{height:auto;max-width:42%;animation:dudu-float 5.5s ease-in-out infinite;transform-origin:center bottom}.left-cat,.right-cat,.side-cat,.eng-side-cat,.challenge img,.eng-stats strong.star img,.words-title>img{height:auto}.subject-card,.quick-actions button,.mode-strip button{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.subject-card:hover,.quick-actions button:hover,.mode-strip button:hover{transform:translateY(-2px)}
-@keyframes dudu-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-@media(max-width:900px){.hero-art,.welcome img,.eng-hero>img{max-width:38%}.left-cat,.right-cat{opacity:.7}.side-cat,.eng-side-cat{max-width:180px}}
-@media(max-width:680px){.hero-art,.welcome img,.eng-hero>img{max-width:46%;filter:drop-shadow(0 8px 14px rgba(77,64,143,.12))}.left-cat,.right-cat{display:none}.side-cat,.eng-side-cat{max-width:140px}.challenge img{max-width:58px}.words-title>img{max-width:70px}}
-@media(prefers-reduced-motion:reduce){.hero-art,.welcome img,.eng-hero>img{animation:none}.subject-card,.quick-actions button,.mode-strip button{transition:none}}
+.hero-art,
+.left-cat,
+.right-cat,
+.side-cat,
+.eng-side-cat,
+.welcome img,
+.eng-hero > img,
+.challenge img,
+.eng-stats strong.star img,
+.words-title > img {
+  content: normal !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 14px 22px rgba(77, 64, 143, .14));
+}
+
+.hero-art,
+.welcome img,
+.eng-hero > img {
+  height: auto;
+  max-width: 42%;
+  animation: dudu-float 5.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.left-cat,
+.right-cat,
+.side-cat,
+.eng-side-cat,
+.challenge img,
+.eng-stats strong.star img,
+.words-title > img {
+  height: auto;
+}
+
+.subject-card,
+.quick-actions button,
+.mode-strip button {
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.subject-card:hover,
+.quick-actions button:hover,
+.mode-strip button:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes dudu-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@media (max-width: 900px) {
+  .hero-art,
+  .welcome img,
+  .eng-hero > img {
+    max-width: 38%;
+  }
+
+  .left-cat,
+  .right-cat {
+    opacity: .7;
+  }
+
+  .side-cat,
+  .eng-side-cat {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero-art,
+  .welcome img,
+  .eng-hero > img {
+    max-width: 46%;
+    filter: drop-shadow(0 8px 14px rgba(77, 64, 143, .12));
+  }
+
+  .left-cat,
+  .right-cat {
+    display: none;
+  }
+
+  .side-cat,
+  .eng-side-cat {
+    max-width: 140px;
+  }
+
+  .challenge img {
+    max-width: 58px;
+  }
+
+  .words-title > img {
+    max-width: 70px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-art,
+  .welcome img,
+  .eng-hero > img {
+    animation: none;
+  }
+
+  .subject-card,
+  .quick-actions button,
+  .mode-strip button {
+    transition: none;
+  }
+}
