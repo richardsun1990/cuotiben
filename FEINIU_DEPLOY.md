@@ -60,7 +60,7 @@ git pull
 ```bash
 cat > .env <<'EOF'
 DUDU_SYNC_TOKEN=改成你自己的同步口令
-OLLAMA_URL=http://host.docker.internal:11434
+OLLAMA_URL=http://127.0.0.1:11434
 DUDU_AI_MODEL=qwen3:1.7b
 EOF
 ```
@@ -142,7 +142,7 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-如果日志里显示连不上 Ollama，可以把 `.env` 里的 `OLLAMA_URL` 改成飞牛局域网地址，例如：
+当前 Docker Compose 使用飞牛的宿主机网络，容器通过 `127.0.0.1:11434` 直接访问 Ollama，避免 `host.docker.internal` 被 Clash fake-ip DNS 解析到 `198.18.x.x`。如果 Ollama 安装在另一台设备上，再把 `.env` 里的 `OLLAMA_URL` 改成那台设备的局域网地址，例如：
 
 ```text
 OLLAMA_URL=http://192.168.3.110:11434
