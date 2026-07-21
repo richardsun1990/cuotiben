@@ -45,7 +45,9 @@
     if(!raw||typeof raw!=='object')return null;
     const question=String(raw.q??raw.question??'').trim();if(!question)return null;
     const state=['wrong','review','done'].includes(raw.status)?raw.status:'wrong';
-    return {id:String(raw.id||transferUid()),q:question,a:String(raw.a??raw.answer??'').trim(),subject:'数学',tag:String(raw.tag??raw.chapter??'').trim(),reason:String(raw.reason??'').trim(),status:state,at:Number(raw.at)||Date.now(),edited:Number(raw.edited)||Number(raw.at)||Date.now(),ansImg:typeof raw.ansImg==='string'?raw.ansImg:null};
+    const item={id:String(raw.id||transferUid()),q:question,a:String(raw.a??raw.answer??'').trim(),subject:'数学',tag:String(raw.tag??raw.chapter??'').trim(),reason:String(raw.reason??'').trim(),status:state,at:Number(raw.at)||Date.now(),edited:Number(raw.edited)||Number(raw.at)||Date.now(),aiHint:String(raw.aiHint||'').trim(),ansImg:typeof raw.ansImg==='string'?raw.ansImg:null};
+    if(raw.aiExplanation?.text)item.aiExplanation={text:String(raw.aiExplanation.text),grade:String(raw.aiExplanation.grade||''),at:Number(raw.aiExplanation.at)||Date.now(),source:String(raw.aiExplanation.source||'import')};
+    return item;
   }
 
   window.exportMathData=function(){
@@ -66,18 +68,18 @@
       const imported=source.map(normalizeMathItem).filter(Boolean);
       if(!imported.length)throw new Error('文件中没有可导入的有效题目');
       const mode=document.querySelector('input[name="mathMode"]:checked')?.value||'merge';
-      let added=0,updated=0;
+      let added=0,updated=0;const affectedIds=[];
       if(mode==='replace'){
-        const other=qs.filter(item=>item.subject!=='数学');qs=[...imported,...other];added=imported.length;
+        const other=qs.filter(item=>item.subject!=='数学');qs=[...imported,...other];added=imported.length;affectedIds.push(...imported.map(item=>item.id));
       }else{
         imported.forEach(item=>{
           const fingerprint=mathFingerprint(item);
           const index=qs.findIndex(old=>old.subject==='数学'&&(String(old.id)===String(item.id)||mathFingerprint(old)===fingerprint));
-          if(index>=0){const old=qs[index];qs[index]={...old,...item,id:old.id,subject:'数学'};updated++}
-          else{qs.unshift(item);added++}
+          if(index>=0){const old=qs[index],contentChanged=mathFingerprint(old)!==fingerprint,merged={...old,...item,id:old.id,subject:'数学'};if(contentChanged&&!item.aiExplanation)delete merged.aiExplanation;qs[index]=merged;affectedIds.push(old.id);updated++}
+          else{qs.unshift(item);affectedIds.push(item.id);added++}
         });
       }
-      save();render();closeDataTransfer();notify(mode==='replace'?`已恢复 ${added} 道数学错题`:`已导入 ${added} 道，更新 ${updated} 道`);
+      save();render();closeDataTransfer();const queued=window.queueMissingAiExplanations?.(affectedIds)||0;notify((mode==='replace'?`已恢复 ${added} 道数学错题`:`已导入 ${added} 道，更新 ${updated} 道`)+(queued?`；${queued} 道已加入AI后台讲解` : ''));
     }catch(error){setStatusText(error.message||'导入失败','error')}finally{button.disabled=false}
   };
 
