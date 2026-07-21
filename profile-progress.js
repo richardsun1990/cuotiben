@@ -37,7 +37,7 @@
     };
     addLink('favicon-svg',{rel:'icon',type:'image/svg+xml',href:'assets/app-icon.svg'});
     addLink('favicon-png',{rel:'icon',type:'image/png',sizes:'512x512',href:'assets/app-icon-512.png'});
-    addLink('apple-touch',{rel:'apple-touch-icon',sizes:'512x512',href:'apple-touch-icon.png'});
+    addLink('apple-touch',{rel:'apple-touch-icon',sizes:'512x512',href:'assets/app-icon-512.png'});
     addLink('manifest',{rel:'manifest',href:'site.webmanifest'});
     addMeta('theme-color','#6C5CE7');
     addMeta('application-name','嘟嘟错题本');
