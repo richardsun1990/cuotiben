@@ -14,7 +14,15 @@
   border-color:#cfc7f7!important;
   background:#f5f2ff!important;
   color:var(--brand,var(--purple))!important;
+  position:relative;
+  z-index:42;
+  pointer-events:auto!important;
+  cursor:pointer!important;
 }
+
+.math-top,.top-data-tools{position:relative;z-index:40}
+.welcome{position:relative}
+.welcome .speech{display:none!important;pointer-events:none!important}
 
 .top-data-tools .ai-tool-btn i{
   width:22px;
@@ -35,7 +43,40 @@
 
 .quick-actions>button{
   min-height:72px;
+  position:relative;
+  z-index:1;
+  cursor:pointer;
 }
+
+.q-ai-main{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  margin:0 0 10px;
+  padding:9px 11px;
+  border:1px solid #d8d0fa;
+  border-radius:10px;
+  background:linear-gradient(120deg,#f6f3ff,#eeebff);
+  color:#5f4bd3;
+  font-size:12px;
+  font-weight:750;
+  cursor:pointer;
+}
+
+.q-ai-main b{
+  display:grid;
+  place-items:center;
+  width:25px;
+  height:25px;
+  border-radius:8px;
+  background:#6c5ce7;
+  color:#fff;
+  font-size:10px;
+}
+
+.q-ai-action{font-weight:800!important;color:#5b45d1!important}
 
 @media(max-width:1280px){
   .quick-actions{
