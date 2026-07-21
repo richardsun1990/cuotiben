@@ -1,5 +1,6 @@
 const KEY='cuoti_v3';
 const MATH_ACTIVITY_KEY='dudu_math_activity_v1';
+const MATH_AI_CONFIG_KEY='dudu_math_ai_config_v1';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const statusLabel={wrong:'未掌握',review:'复习中',done:'已掌握'};
@@ -7,7 +8,7 @@ let qs=[];
 try{qs=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{qs=[]}
 if(!Array.isArray(qs))qs=[];
 qs=qs.map(q=>{const copy={...q,subject:q.subject||'数学'};delete copy.ansImg;return copy});
-let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[];
+let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false;
 
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(qs));return true}
@@ -58,7 +59,7 @@ function cardHtml(x){
   const checked=selected.has(x.id);
   const created=new Date(x.at||Date.now()).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'});
   const reviewed=x.lastReviewedAt?new Date(x.lastReviewedAt).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'}):'—';
-  return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}<div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button onclick="openEdit('${x.id}')">编辑</button><button onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
+  return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}${x.aiExplanation?.text?`<div class="q-ai-preview">已有AI讲解</div>`:''}<div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button onclick="openEdit('${x.id}')">编辑</button><button onclick="openAiExplain('${x.id}')">AI讲解</button><button onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
 }
 
 function enableSelection(){selectionMode=true;$('batchBar').classList.add('show');toast('请勾选需要统一管理的错题')}
@@ -92,5 +93,164 @@ function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.ra
 
 function insertFormula(symbol){const q=$('fQ'),start=q.selectionStart,end=q.selectionEnd;q.setRangeText(symbol,start,end,'end');q.focus()}
 function refreshTagSuggestions(){const dl=$('mathTags');if(!dl)return;const tags=[...new Set(mathQuestions().map(q=>q.tag).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'));dl.innerHTML=tags.map(t=>`<option value="${esc(t)}"></option>`).join('')}
+
+function getAiConfig(){
+  const fallback={endpoint:'http://192.168.3.110:11434/api/chat',model:'qwen3:1.7b'};
+  try{return {...fallback,...(JSON.parse(localStorage.getItem(MATH_AI_CONFIG_KEY)||'{}')||{})}}
+  catch{return fallback}
+}
+
+function saveAiSettings(silent=false){
+  const endpoint=($('aiEndpoint')?.value||'').trim();
+  const model=($('aiModel')?.value||'').trim()||'qwen3:1.7b';
+  if(!endpoint){toast('请填写AI接口地址');$('aiEndpoint')?.focus();return false}
+  localStorage.setItem(MATH_AI_CONFIG_KEY,JSON.stringify({endpoint,model}));
+  if(!silent)toast('AI设置已保存');
+  return true;
+}
+
+function openAiSettings(){
+  aiQuestionId=null;
+  const cfg=getAiConfig();
+  $('aiTitle').textContent='AI讲解设置';
+  $('aiQuestionPreview').innerHTML='<b>先配置飞牛本地模型接口</b><span>设置后，打开任意错题即可直接生成讲解。</span>';
+  $('aiHint').value='';
+  $('aiHint').disabled=true;
+  $('aiModel').value=cfg.model;
+  $('aiEndpoint').value=cfg.endpoint;
+  $('aiGenerateBtn').style.display='none';
+  setAiStatus('');
+  $('aiResult').innerHTML='';
+  $('aiOverlay').classList.add('open');
+}
+
+function openAiExplain(id){
+  const q=getQuestion(id);
+  if(!q)return;
+  aiQuestionId=id;
+  const cfg=getAiConfig();
+  $('aiTitle').textContent='AI错题讲解';
+  $('aiQuestionPreview').innerHTML=`<b>${esc(q.tag||'数学题')}</b><p>${esc(q.q)}</p>${q.a?`<small>已有答案 / 思路：${esc(q.a)}</small>`:''}`;
+  $('aiHint').disabled=false;
+  $('aiHint').value=q.aiHint||'';
+  $('aiModel').value=cfg.model;
+  $('aiEndpoint').value=cfg.endpoint;
+  $('aiGenerateBtn').style.display='';
+  $('aiGenerateBtn').textContent=q.aiExplanation?.text?'重新生成AI讲解':'生成AI讲解';
+  setAiStatus('');
+  renderAiResult(q.aiExplanation);
+  $('aiOverlay').classList.add('open');
+}
+
+function closeAiExplain(){
+  $('aiOverlay').classList.remove('open');
+  $('aiHint').disabled=false;
+  aiQuestionId=null;
+}
+
+function setAiStatus(text,type=''){
+  const el=$('aiStatus');
+  if(!el)return;
+  el.textContent=text||'';
+  el.className=`ai-status ${type}`.trim();
+}
+
+function renderAiResult(data){
+  const el=$('aiResult');
+  if(!el)return;
+  if(!data?.text){el.innerHTML='<div class="ai-empty">还没有生成讲解。点击“生成AI讲解”，本地模型会根据题目直接解释。</div>';return}
+  const time=data.at?new Date(data.at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  el.innerHTML=`<div class="ai-result-head"><b>AI讲解</b><span>${esc(data.model||'本地模型')}${time?' · '+esc(time):''}</span></div>${formatAiText(data.text)}`;
+}
+
+function formatAiText(text){
+  return String(text||'').trim().split(/\n{2,}/).filter(Boolean).map(block=>{
+    const safe=esc(block).replace(/\n/g,'<br>');
+    return `<p>${safe}</p>`;
+  }).join('');
+}
+
+function buildAiPrompt(q,hint){
+  return `你是一个耐心的小学数学老师，正在给四年级孩子讲一道不会的题。请用中文回答，语气温和、清楚、不要太长。
+
+要求：
+1. 不要默认孩子已经在 iPad 上作答；孩子可能是在本子上做题。
+2. 孩子错误答案/卡住点是可选信息，没有提供时不要编造。
+3. 如果题目信息不足，请先指出缺少什么，不要硬编答案。
+4. 讲解要适合小学生，避免复杂术语。
+5. 最后给一道很短的同类小练习。
+
+请按下面结构输出：
+【这题考什么】
+【怎么想】
+【一步一步做】
+【容易错在哪里】
+【同类小练习】
+
+题目：
+${q.q||''}
+
+已有正确答案或解题思路：
+${q.a||'未提供'}
+
+知识点/章节：
+${q.tag||'未分类'}
+
+可选补充：孩子卡在哪里或本子上的错误答案：
+${hint||'未提供'}`;
+}
+
+function parseAiResponse(data){
+  if(typeof data==='string')return data;
+  return data?.explanation||data?.text||data?.content||data?.message?.content||data?.response||data?.choices?.[0]?.message?.content||'';
+}
+
+async function requestAiExplanation(endpoint,model,prompt,q,hint){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),90000);
+  const isOllamaChat=/\/api\/chat\/?$/.test(endpoint);
+  const isOllamaGenerate=/\/api\/generate\/?$/.test(endpoint);
+  const body=isOllamaChat?{model,messages:[{role:'system',content:'你只负责讲解小学数学题，必须诚实、清楚、适合孩子理解。'},{role:'user',content:prompt}],stream:false,options:{temperature:.2}}:isOllamaGenerate?{model,prompt,stream:false,options:{temperature:.2}}:{question:q.q||'',subject:'数学',grade:'小学四年级',correctAnswer:q.a||'',wrongAnswer:hint||'',knowledgePoint:q.tag||'',model,prompt};
+  try{
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    return parseAiResponse(await res.json());
+  }finally{clearTimeout(timer)}
+}
+
+async function generateAiExplanation(){
+  if(aiGenerating)return;
+  const q=getQuestion(aiQuestionId);
+  if(!q){toast('请先选择一道错题');return}
+  if(!saveAiSettings(true))return;
+  const cfg=getAiConfig();
+  const hint=($('aiHint')?.value||'').trim();
+  const prompt=buildAiPrompt(q,hint);
+  aiGenerating=true;
+  $('aiGenerateBtn').disabled=true;
+  setAiStatus('本地模型正在生成讲解，第一次可能会慢一点……','loading');
+  try{
+    const text=await requestAiExplanation(cfg.endpoint,cfg.model,prompt,q,hint);
+    if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
+    q.aiHint=hint;
+    q.aiExplanation={text:text.trim(),model:cfg.model,at:Date.now()};
+    q.edited=Date.now();
+    if(save()){
+      renderAiResult(q.aiExplanation);
+      render();
+      openAiExplain(q.id);
+      setAiStatus('讲解已保存到这道错题里。','success');
+      toast('AI讲解已生成');
+    }
+  }catch(error){
+    console.error(error);
+    const message=error.name==='AbortError'?'生成超时，请确认飞牛模型是否正在运行。':'AI讲解失败，请检查接口地址、Ollama服务和浏览器跨域设置。';
+    setAiStatus(message,'error');
+  }finally{
+    aiGenerating=false;
+    $('aiGenerateBtn').disabled=false;
+  }
+}
+
 window.addEventListener('afterprint',()=>document.body.classList.remove('printing-paper'));
 save();refreshTagSuggestions();render();
