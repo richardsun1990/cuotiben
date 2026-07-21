@@ -129,6 +129,7 @@ async function handleApi(req, res, pathname) {
     try {
       const body = await readBody(req);
       const prompt = String(body.prompt || '').trim();
+      const grade = String(body.grade || '三年级').trim() || '三年级';
       const model = String(body.model || DEFAULT_AI_MODEL).trim() || DEFAULT_AI_MODEL;
       if (!prompt) return send(res, 400, { error: '题目信息不足，无法生成讲解' }, headers);
       const aiResponse = await fetch(`${OLLAMA_URL}/api/chat`, {
@@ -138,7 +139,7 @@ async function handleApi(req, res, pathname) {
           model,
           stream: false,
           messages: [
-            { role: 'system', content: '你只负责讲解小学数学题，必须诚实、清楚、适合孩子理解。' },
+            { role: 'system', content: `你只负责讲解数学题。学生当前是${grade}。必须严格遵守用户给出的年级和方法限制，不得使用高于${grade}的知识、公式、术语或技巧；低年级不得用字母未知数、列方程或代数方法。回答前自查，发现超纲必须改用该年级能理解的直观方法。必须诚实、清楚、适合孩子理解。` },
             { role: 'user', content: prompt }
           ],
           options: { temperature: 0.2 }
