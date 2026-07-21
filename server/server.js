@@ -7,7 +7,7 @@ const PORT = Number(process.env.PORT || 8787);
 const DATA_FILE = process.env.DATA_FILE || '/data/sync.json';
 const PUBLIC_DIR = process.env.PUBLIC_DIR || path.resolve(__dirname, '..');
 const SYNC_TOKEN = process.env.DUDU_SYNC_TOKEN || process.env.SYNC_TOKEN || '';
-const OLLAMA_URL = (process.env.OLLAMA_URL || process.env.DUDU_OLLAMA_URL || 'http://host.docker.internal:11434').replace(/\/+$/, '');
+const OLLAMA_URL = (process.env.OLLAMA_URL || process.env.DUDU_OLLAMA_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
 const DEFAULT_AI_MODEL = process.env.DUDU_AI_MODEL || 'qwen3:1.7b';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*')
   .split(',')
@@ -110,6 +110,21 @@ function normalizeData(raw) {
 async function handleApi(req, res, pathname) {
   const headers = corsHeaders(req);
   if (req.method === 'OPTIONS') return send(res, 204, '', headers);
+  if (pathname === '/api/ai/health' && req.method === 'GET') {
+    try {
+      const aiResponse = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(5000) });
+      const aiData = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) return send(res, 502, { ok: false, error: aiData.error || `Ollama HTTP ${aiResponse.status}` }, headers);
+      const models = Array.isArray(aiData.models) ? aiData.models.map(item => item.name).filter(Boolean) : [];
+      return send(res, 200, { ok: true, ollamaUrl: OLLAMA_URL, defaultModel: DEFAULT_AI_MODEL, models }, headers);
+    } catch (error) {
+      return send(res, 502, {
+        ok: false,
+        error: error.cause?.code || error.code || error.message || '无法连接 Ollama',
+        hint: '请确认飞牛上的 Ollama 正在运行，并重新创建容器以启用 host 网络'
+      }, headers);
+    }
+  }
   if (pathname === '/api/ai/explain' && req.method === 'POST') {
     try {
       const body = await readBody(req);
