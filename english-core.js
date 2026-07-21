@@ -9,7 +9,7 @@ const IRREGULAR_COMMON=new Set(['one','two','said','says','does','done','come','
 function day(){return Math.floor(Date.now()/DAY)}function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}function safeJson(key,fallback){try{const x=JSON.parse(localStorage.getItem(key)||'null');return x??fallback}catch{return fallback}}function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function migrate(){const current=safeJson(WORD_KEY,null);if(Array.isArray(current))return current.map(normalizeWord);const old=safeJson(OLD_KEY,[]);if(old.length)return old.map(normalizeWord);return [normalizeWord({word:'apple',meaning:'苹果',phonetic:'/ˈæpəl/',source:'示例词库'}),normalizeWord({word:'beautiful',meaning:'美丽的',phonetic:'/ˈbjuːtɪfəl/',source:'示例词库'}),normalizeWord({word:'question',meaning:'问题',phonetic:'/ˈkwestʃən/',source:'示例词库'})]}
 function normalizeWord(w){const a=buildAnalysis((w.word||'').toLowerCase(),w.numSyllables);return{...w,id:w.id||uid(),word:(w.word||'').toLowerCase(),meaning:w.meaning||'',phonetic:w.phonetic||'',audio:w.audio||'',source:w.source||'手动添加',sourceName:w.sourceName||'',syllables:w.syllables||a.syllables,chunks:w.chunks||a.chunks,phonicsTip:w.phonicsTip||w.memory||a.tip,isIrregular:w.isIrregular??a.isIrregular,level:Number(w.level)||0,due:Number(w.due)||0,seen:Number(w.seen)||0,correct:Number(w.correct)||0,weak:!!w.weak,lapses:Number(w.lapses)||0,spellStreak:Number(w.spellStreak)||0,createdAt:w.createdAt||Date.now(),introducedDay:w.introducedDay??null,lastStudiedAt:w.lastStudiedAt||null}}
-let words=migrate(),history=safeJson(HISTORY_KEY,[]),daily=safeJson(DAILY_KEY,{}),settings={dailyLimit:8,...safeJson(SETTINGS_KEY,{})};let pending=null,currentFilter='all',taskQueue=[],taskIndex=0,sessionMode='',sessionResults={},sessionStartedAt=0,buildState=null,activityLocked=false;
+let words=migrate(),history=safeJson(HISTORY_KEY,[]),daily=safeJson(DAILY_KEY,{}),settings={dailyLimit:8,...safeJson(SETTINGS_KEY,{})};let pending=null,currentFilter='all',taskQueue=[],taskIndex=0,sessionMode='',sessionResults={},sessionStartedAt=0,buildState=null,activityLocked=false,selectedWordIds=new Set(),visibleWordIds=[];
 function persist(){localStorage.setItem(WORD_KEY,JSON.stringify(words));localStorage.setItem(HISTORY_KEY,JSON.stringify(history));localStorage.setItem(DAILY_KEY,JSON.stringify(daily));localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))}
 function todayRecord(){const k=String(day());return daily[k]||(daily[k]={activities:0,correct:0,sessions:0,newWords:0})}
 function saveSettings(){settings.dailyLimit=Number(document.getElementById('dailyLimit').value)||8;persist();render()}
@@ -19,7 +19,71 @@ function smartWords(){const out=[],seen=new Set();[...weakWords().slice(0,5),...
 function streakDays(){const active=new Set(Object.entries(daily).filter(([,v])=>(v.activities||0)>0).map(([k])=>Number(k)));let n=0,d=day();if(!active.has(d)&&active.has(d-1))d--;while(active.has(d)){n++;d--}return n}
 function statusOf(w){if(w.seen===0)return['未学习','new'];if(isWeak(w))return['不熟悉','weak'];if(isMastered(w))return['已掌握','master'];return['复习中','review']}
 function setFilter(name,el){currentFilter=name;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('on',b===el));render()}
-function render(){document.getElementById('dailyLimit').value=String(settings.dailyLimit||8);const q=(document.getElementById('searchInput').value||'').toLowerCase();let list=words.filter(w=>!q||w.word.includes(q)||(w.meaning||'').includes(q));if(currentFilter==='new')list=list.filter(w=>w.seen===0);if(currentFilter==='weak')list=list.filter(isWeak);if(currentFilter==='master')list=list.filter(isMastered);const nw=newWordsPreview(),ww=weakWords(),dw=dueWords(),tr=todayRecord();document.getElementById('sideCount').textContent=words.length+'词';document.getElementById('newCount').textContent=nw.length;document.getElementById('weakCount').textContent=ww.length;document.getElementById('dueCount').textContent=dw.length;document.getElementById('masteredCount').textContent=words.filter(isMastered).length;document.getElementById('streakCount').textContent=streakDays();const recent=history.slice(-20),recentRate=recent.length?Math.round(recent.filter(x=>x.correct).length/recent.length*100):0;const recentEl=document.getElementById('recentAccuracy');if(recentEl)recentEl.textContent=recent.length?recentRate+'%':'—';const goalEl=document.getElementById('goalProgress');if(goalEl)goalEl.textContent=recent.length?recentRate+'%':'—';document.getElementById('newModeCount').textContent=nw.length+' 个可学';document.getElementById('weakModeCount').textContent=ww.length+' 个待强化';document.getElementById('dueModeCount').textContent=dw.length+' 个到期';document.getElementById('mixModeCount').textContent=smartWords().length+' 个智能安排';document.getElementById('todayProgress').textContent=(tr.activities||0)+' 次练习';document.getElementById('todayBar').style.width=Math.min(100,(tr.activities||0)/Math.max(12,(settings.dailyLimit||8)*3)*100)+'%';const g=document.getElementById('wordCards');if(!list.length){g.innerHTML='<div class="empty"><img src="assets/empty-box.svg" alt="暂无单词"><b>这里还没有单词</b><span>在上方输入英文，系统会自动建立拼读卡片。</span></div>';return}g.innerHTML=list.map(w=>{const [sl,sc]=statusOf(w),acc=accuracyOf(w);return`<article class="card"><div class="card-head"><div class="grow"><div class="word">${esc(w.word)}</div><div class="phonetic">${esc(w.phonetic||'音标暂缺')}</div><div class="meaning">${esc(w.meaning||'释义待确认')}</div><span class="status ${sc}">${sl}</span></div><span class="source">${esc(w.source)}</span></div><div class="skill"><div class="skill-title">${w.isIrregular?'❤️ 特殊部分单独记':'🔤 规则拼读'}</div><div class="syllables">${(w.syllables||[w.word]).map(s=>`<span class="syl">${esc(s)}</span>`).join('')}</div><div class="patterns">${(w.chunks||[[w.word,0]]).map(c=>`<span class="pattern ${c[1]?'irregular':''}">${esc(c[0])}</span>`).join('')}</div><div class="tip">${esc(w.phonicsTip)}</div></div><div class="card-meta"><b>练习：</b>${w.seen||0} 次　<b>正确率：</b>${w.seen?acc+'%':'尚未学习'}<div class="mastery-line"><span>熟练度</span><div class="mini-bar"><i style="width:${Math.min(100,(w.level||0)/7*100)}%"></i></div><span>${w.level||0}/7</span></div></div><div class="actions"><button class="learn" onclick="studyOne('${w.id}')">专项学习</button><button onclick="playWord('${w.id}')">播放发音</button><button class="weak-btn ${w.weak?'on':''}" onclick="toggleWeak('${w.id}')">${w.weak?'取消不熟悉':'标记不熟悉'}</button><button onclick="removeWord('${w.id}')">删除</button></div></article>`}).join('')}
+function render(){
+  document.getElementById('dailyLimit').value=String(settings.dailyLimit||8);
+  const validIds=new Set(words.map(w=>w.id));selectedWordIds.forEach(id=>{if(!validIds.has(id))selectedWordIds.delete(id)});
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  let list=words.filter(w=>!q||w.word.includes(q)||(w.meaning||'').includes(q));
+  if(currentFilter==='new')list=list.filter(w=>w.seen===0);
+  if(currentFilter==='weak')list=list.filter(isWeak);
+  if(currentFilter==='review')list=list.filter(w=>statusOf(w)[1]==='review');
+  if(currentFilter==='master')list=list.filter(isMastered);
+  visibleWordIds=list.map(w=>w.id);
+  const nw=newWordsPreview(),ww=weakWords(),dw=dueWords(),tr=todayRecord();
+  document.getElementById('sideCount').textContent=words.length+'词';
+  document.getElementById('newCount').textContent=nw.length;
+  document.getElementById('weakCount').textContent=ww.length;
+  document.getElementById('dueCount').textContent=dw.length;
+  document.getElementById('masteredCount').textContent=words.filter(isMastered).length;
+  document.getElementById('streakCount').textContent=streakDays();
+  const recent=history.slice(-20),recentRate=recent.length?Math.round(recent.filter(x=>x.correct).length/recent.length*100):0;
+  const recentEl=document.getElementById('recentAccuracy');if(recentEl)recentEl.textContent=recent.length?recentRate+'%':'—';
+  const goalEl=document.getElementById('goalProgress');if(goalEl)goalEl.textContent=recent.length?recentRate+'%':'—';
+  document.getElementById('newModeCount').textContent=nw.length+' 个可学';
+  document.getElementById('weakModeCount').textContent=ww.length+' 个待强化';
+  document.getElementById('dueModeCount').textContent=dw.length+' 个到期';
+  document.getElementById('mixModeCount').textContent=smartWords().length+' 个智能安排';
+  document.getElementById('todayProgress').textContent=(tr.activities||0)+' 次练习';
+  document.getElementById('todayBar').style.width=Math.min(100,(tr.activities||0)/Math.max(12,(settings.dailyLimit||8)*3)*100)+'%';
+  const g=document.getElementById('wordCards');
+  if(!list.length){g.innerHTML='<div class="empty"><img src="assets/empty-box.svg" alt="暂无单词"><b>这里还没有单词</b><span>在上方输入英文，系统会自动建立拼读卡片。</span></div>';updateWordBatchBar();return}
+  g.innerHTML=list.map(w=>{
+    const [sl,sc]=statusOf(w),acc=accuracyOf(w),checked=selectedWordIds.has(w.id);
+    return`<article class="card ${checked?'selected':''}"><label class="word-select" title="选择 ${esc(w.word)}"><input type="checkbox" ${checked?'checked':''} onchange="toggleWordSelection('${w.id}',this.checked)"><span aria-hidden="true"></span><em>选择</em></label><div class="card-head"><div class="grow"><div class="word">${esc(w.word)}</div><div class="phonetic">${esc(w.phonetic||'音标暂缺')}</div><div class="meaning">${esc(w.meaning||'释义待确认')}</div><span class="status ${sc}">${sl}</span></div><span class="source">${esc(w.source)}</span></div><div class="skill"><div class="skill-title">${w.isIrregular?'❤️ 特殊部分单独记':'🔤 规则拼读'}</div><div class="syllables">${(w.syllables||[w.word]).map(s=>`<span class="syl">${esc(s)}</span>`).join('')}</div><div class="patterns">${(w.chunks||[[w.word,0]]).map(c=>`<span class="pattern ${c[1]?'irregular':''}">${esc(c[0])}</span>`).join('')}</div><div class="tip">${esc(w.phonicsTip)}</div></div><div class="card-meta"><b>练习：</b>${w.seen||0} 次　<b>正确率：</b>${w.seen?acc+'%':'尚未学习'}<div class="mastery-line"><span>熟练度</span><div class="mini-bar"><i style="width:${Math.min(100,(w.level||0)/7*100)}%"></i></div><span>${w.level||0}/7</span></div></div><div class="actions"><button class="learn" onclick="studyOne('${w.id}')">专项学习</button><button onclick="playWord('${w.id}')">播放发音</button><button class="weak-btn ${w.weak?'on':''}" onclick="toggleWeak('${w.id}')">${w.weak?'取消不熟悉':'标记不熟悉'}</button><button onclick="removeWord('${w.id}')">删除</button></div></article>`
+  }).join('');
+  updateWordBatchBar();
+}
+
+function updateWordBatchBar(){
+  const bar=document.getElementById('wordBatchBar'),count=document.getElementById('selectedWordCount');
+  if(!bar||!count)return;
+  count.textContent=`已选择 ${selectedWordIds.size} 个单词`;
+  bar.classList.toggle('open',selectedWordIds.size>0);
+}
+function toggleWordSelection(id,checked){
+  if(checked)selectedWordIds.add(id);else selectedWordIds.delete(id);
+  document.querySelectorAll('.card').forEach(card=>{const input=card.querySelector('.word-select input');if(input)card.classList.toggle('selected',input.checked)});
+  updateWordBatchBar();
+}
+function selectAllVisibleWords(){visibleWordIds.forEach(id=>selectedWordIds.add(id));render();toast(`已选择当前 ${visibleWordIds.length} 个单词`)}
+function clearWordSelection(){selectedWordIds.clear();render()}
+function selectedWords(){return words.filter(w=>selectedWordIds.has(w.id))}
+function applySelectedWordStatus(status){
+  if(!status)return;
+  const selected=selectedWords();if(!selected.length){toast('请先勾选单词');return}
+  selected.forEach(w=>{
+    if(status==='new'){w.seen=0;w.correct=0;w.level=0;w.due=0;w.weak=false;w.lapses=0;w.spellStreak=0;w.introducedDay=null;w.lastStudiedAt=null}
+    if(status==='weak'){w.seen=Math.max(1,w.seen||0);w.level=Math.min(2,w.level||0);w.due=day();w.weak=true;w.spellStreak=0}
+    if(status==='review'){w.seen=Math.max(1,w.seen||0);w.correct=Math.max(w.correct||0,Math.ceil(w.seen*.75));w.level=Math.max(3,Math.min(4,w.level||3));w.due=day()+1;w.weak=false;w.spellStreak=Math.min(1,w.spellStreak||0)}
+    if(status==='master'){w.seen=Math.max(1,w.seen||0);w.correct=Math.max(w.correct||0,Math.ceil(w.seen*.75));w.level=Math.max(5,w.level||0);w.due=day()+30;w.weak=false;w.spellStreak=Math.max(2,w.spellStreak||0)}
+  });
+  const labels={new:'未学习',weak:'不熟悉',review:'复习中',master:'已掌握'};
+  persist();selectedWordIds.clear();render();toast(`已将 ${selected.length} 个单词设为“${labels[status]}”`);
+}
+function startSelectedWords(kind){
+  const selected=selectedWords();if(!selected.length){toast('请先勾选要学习或测试的单词');return}
+  beginSession(selected,kind==='test'?'selectedTest':'selectedStudy');
+}
 function buildAnalysis(word,knownCount){if(SPECIAL[word])return{...SPECIAL[word],isIrregular:SPECIAL[word].chunks.some(x=>x[1])};const count=Number(knownCount)||estimateSyllables(word),syllables=splitSyllables(word,count),chunks=phonicsChunks(word),isIrregular=IRREGULAR_COMMON.has(word)||chunks.some(x=>x[1]);let tip=`先按 ${syllables.join(' · ')} 分音节读，再把蓝色字母组合当成一个整体拼写。`;const doubles=word.match(/([bcdfghjklmnpqrstvwxyz])\1/i);if(doubles)tip+=` 注意 ${doubles[0]} 是双写辅音。`;if(isIrregular)tip+=' 红色部分不能只靠发音推出，需要额外看一眼、写一遍。';return{syllables,chunks,tip,isIrregular}}
 function estimateSyllables(word){let w=word.toLowerCase().replace(/[^a-z]/g,'');if(!w||w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');return Math.max(1,(w.match(/[aeiouy]{1,2}/g)||[]).length)}
 function splitSyllables(word,target){const w=word.toLowerCase(),v=/[aeiouy]/,groups=[];let start=0,vowels=0;for(let i=0;i<w.length;i++){if(v.test(w[i])&&(i===0||!v.test(w[i-1])))vowels++;if(vowels<target&&i>0&&v.test(w[i-1])&&!v.test(w[i])){let cut=i+1;if(i+1<w.length&&v.test(w[i+1]))cut=i;if(cut>start+1){groups.push(w.slice(start,cut));start=cut}}}groups.push(w.slice(start));while(groups.length>target){const a=groups.pop();groups[groups.length-1]+=a}return groups.filter(Boolean)}
