@@ -112,16 +112,20 @@ function saveAiSettings(silent=false){
 function openAiSettings(){
   aiQuestionId=null;
   const cfg=getAiConfig();
-  $('aiTitle').textContent='AI讲解设置';
-  $('aiQuestionPreview').innerHTML='<b>先配置飞牛本地模型接口</b><span>设置后，打开任意错题即可直接生成讲解。</span>';
+  $('aiTitle').textContent='AI解题讲解';
+  $('aiQuestionPreview').innerHTML='<b>直接问本地AI</b><span>把不会的题输入到下面，不需要先录入错题。孩子卡在哪里可以不填。</span>';
+  $('aiQuestionField').style.display='';
+  $('aiQuestionInput').value='';
   $('aiHint').value='';
-  $('aiHint').disabled=true;
+  $('aiHint').disabled=false;
   $('aiModel').value=cfg.model;
   $('aiEndpoint').value=cfg.endpoint;
-  $('aiGenerateBtn').style.display='none';
+  $('aiGenerateBtn').style.display='';
+  $('aiGenerateBtn').textContent='生成AI讲解';
   setAiStatus('');
-  $('aiResult').innerHTML='';
+  renderAiResult(null);
   $('aiOverlay').classList.add('open');
+  setTimeout(()=>$('aiQuestionInput')?.focus(),80);
 }
 
 function openAiExplain(id){
@@ -131,6 +135,8 @@ function openAiExplain(id){
   const cfg=getAiConfig();
   $('aiTitle').textContent='AI错题讲解';
   $('aiQuestionPreview').innerHTML=`<b>${esc(q.tag||'数学题')}</b><p>${esc(q.q)}</p>${q.a?`<small>已有答案 / 思路：${esc(q.a)}</small>`:''}`;
+  $('aiQuestionField').style.display='none';
+  $('aiQuestionInput').value='';
   $('aiHint').disabled=false;
   $('aiHint').value=q.aiHint||'';
   $('aiModel').value=cfg.model;
@@ -200,6 +206,12 @@ ${q.tag||'未分类'}
 ${hint||'未提供'}`;
 }
 
+function buildDirectAiQuestion(){
+  const question=($('aiQuestionInput')?.value||'').trim();
+  if(!question)return null;
+  return {q:question,a:'',tag:'直接提问'};
+}
+
 function parseAiResponse(data){
   if(typeof data==='string')return data;
   return data?.explanation||data?.text||data?.content||data?.message?.content||data?.response||data?.choices?.[0]?.message?.content||'';
@@ -220,8 +232,9 @@ async function requestAiExplanation(endpoint,model,prompt,q,hint){
 
 async function generateAiExplanation(){
   if(aiGenerating)return;
-  const q=getQuestion(aiQuestionId);
-  if(!q){toast('请先选择一道错题');return}
+  const storedQuestion=getQuestion(aiQuestionId);
+  const q=storedQuestion||buildDirectAiQuestion();
+  if(!q){toast('请先输入题目内容');$('aiQuestionInput')?.focus();return}
   if(!saveAiSettings(true))return;
   const cfg=getAiConfig();
   const hint=($('aiHint')?.value||'').trim();
@@ -232,14 +245,20 @@ async function generateAiExplanation(){
   try{
     const text=await requestAiExplanation(cfg.endpoint,cfg.model,prompt,q,hint);
     if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
-    q.aiHint=hint;
-    q.aiExplanation={text:text.trim(),model:cfg.model,at:Date.now()};
-    q.edited=Date.now();
-    if(save()){
-      renderAiResult(q.aiExplanation);
-      render();
-      openAiExplain(q.id);
-      setAiStatus('讲解已保存到这道错题里。','success');
+    if(storedQuestion){
+      q.aiHint=hint;
+      q.aiExplanation={text:text.trim(),model:cfg.model,at:Date.now()};
+      q.edited=Date.now();
+      if(save()){
+        renderAiResult(q.aiExplanation);
+        render();
+        openAiExplain(q.id);
+        setAiStatus('讲解已保存到这道错题里。','success');
+        toast('AI讲解已生成');
+      }
+    }else{
+      renderAiResult({text:text.trim(),model:cfg.model,at:Date.now()});
+      setAiStatus('讲解已生成。直接提问不会自动加入错题本，需要保存时可以复制到错题答案/思路里。','success');
       toast('AI讲解已生成');
     }
   }catch(error){
