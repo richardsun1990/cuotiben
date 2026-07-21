@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="responsive.css">
   <link rel="stylesheet" href="profile.css">
   <link rel="stylesheet" href="reliability.css">
+  <link rel="stylesheet" href="english-selection.css?v=20260721-1">
   <link rel="stylesheet" href="asset-polish.css?v=20260721-6">
   <link rel="stylesheet" href="illustrations.css?v=20260721-6">
 </head>
@@ -42,7 +43,21 @@
       <section class="eng-hero"><div><h2>只输入一个英文单词，其他交给系统。</h2><p>自动查询中文意思、音标和发音，并按音节与常见字母组合拆解。孩子通过“听音—分音节—拼读块—听写”形成拼写能力。</p><div class="eng-add"><input id="wordInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="输入英文单词，如 beautiful" onkeydown="if(event.key==='Enter')lookupWord()"><select id="sourceInput"><option>手动添加</option><option>课本</option><option>老师词表</option><option>英语错题</option></select><button id="lookupBtn" onclick="lookupWord()">智能添加一个</button><button class="batch-open-btn" type="button" onclick="openEnglishBatchImport()">批量导入</button></div><small>⌖ 可以一个个智能添加，也可以批量粘贴或上传老师词表</small></div><img src="assets/cats/english-study.png?v=20260721-5" alt="戴耳机学习英语的小猫" width="620" height="459" decoding="async" fetchpriority="high"></section>
       <section class="eng-stats"><div><strong><img src="assets/icon-books.svg" alt=""></strong><b id="dueCount">0</b><span>今天复习<small>坚持就是胜利！💪</small></span></div><div><strong class="orange"><img src="assets/icon-trophy.svg" alt=""></strong><b id="masteredCount">0</b><span>基本掌握<small>加油复习哦～</small></span></div><div><strong class="star"><img src="assets/cats/cheer.png?v=20260721-5" alt="" width="190" height="231" loading="lazy" decoding="async"></strong><b id="weakCount">0</b><span>不熟悉词<small>重点强化中</small></span></div><div><strong class="chart"><img src="assets/icon-shield.svg" alt=""></strong><b id="recentAccuracy">—</b><span>最近听写正确率<small>只统计听音拼写</small></span></div><span hidden id="newCount"></span><span hidden id="streakCount"></span></section>
       <section class="mode-strip"><button onclick="startMode('new')"><b>🌱 今日新词</b><span id="newModeCount">0 个可学</span></button><button onclick="startMode('weak')"><b>🔥 不熟悉词</b><span id="weakModeCount">0 个待强化</span></button><button onclick="startMode('due')"><b>⏰ 到期复习</b><span id="dueModeCount">0 个到期</span></button><button class="mix" onclick="startMode('mix')"><b>🧠 智能混合</b><span id="mixModeCount">智能安排</span></button></section>
-      <section class="words-head"><div class="words-title"><img src="assets/cats/cat-book.png?v=20260721-5" alt="" width="520" height="327" loading="lazy" decoding="async"><div><h2>我的单词</h2><p>红色拼读块表示需要额外记忆的特殊拼写。</p></div></div><div class="word-tools"><div class="search">⌕<input id="searchInput" placeholder="搜索单词" oninput="render()"></div><button class="dictation" onclick="startMode('mix')">开始今日听写</button><div class="filters"><button class="filter-btn on" onclick="setFilter('all',this)">全部状态</button><button class="filter-btn" onclick="setFilter('new',this)">未学习</button><button class="filter-btn" onclick="setFilter('weak',this)">不熟悉</button><button class="filter-btn" onclick="setFilter('master',this)">已掌握</button></div></div></section>
+      <section class="words-head"><div class="words-title"><img src="assets/cats/cat-book.png?v=20260721-5" alt="" width="520" height="327" loading="lazy" decoding="async"><div><h2>我的单词</h2><p>勾选单词后，可以批量管理状态或只学习、测试所选单词。</p></div></div><div class="word-tools"><div class="search">⌕<input id="searchInput" placeholder="搜索单词" oninput="render()"></div><button class="select-visible-btn" type="button" onclick="selectAllVisibleWords()">✓ 选择当前</button><button class="dictation" onclick="startMode('mix')">开始今日听写</button><div class="filters"><button class="filter-btn on" onclick="setFilter('all',this)">全部状态</button><button class="filter-btn" onclick="setFilter('new',this)">未学习</button><button class="filter-btn" onclick="setFilter('weak',this)">不熟悉</button><button class="filter-btn" onclick="setFilter('review',this)">复习中</button><button class="filter-btn" onclick="setFilter('master',this)">已掌握</button></div></div></section>
+      <section class="word-batch-bar" id="wordBatchBar" aria-live="polite">
+        <div class="word-batch-summary"><b id="selectedWordCount">已选择 0 个单词</b><span>状态管理、学习和测试都只作用于所选单词</span></div>
+        <button type="button" class="batch-secondary" onclick="selectAllVisibleWords()">全选当前结果</button>
+        <select id="selectedWordStatus" aria-label="批量修改单词状态" onchange="applySelectedWordStatus(this.value);this.value=''">
+          <option value="">批量修改状态</option>
+          <option value="new">设为未学习</option>
+          <option value="weak">设为不熟悉</option>
+          <option value="review">设为复习中</option>
+          <option value="master">设为已掌握</option>
+        </select>
+        <button type="button" class="batch-study" onclick="startSelectedWords('study')">🌱 学习所选</button>
+        <button type="button" class="batch-test" onclick="startSelectedWords('test')">✍️ 测试所选</button>
+        <button type="button" class="batch-secondary" onclick="clearWordSelection()">取消选择</button>
+      </section>
       <div class="cards" id="wordCards"></div>
     </div>
   </main>
