@@ -136,29 +136,27 @@
   line-height:1.55;
 }
 
-.ai-config{
-  display:grid;
-  grid-template-columns:150px 1fr;
-  gap:12px;
-}
-
-.ai-help{
+.ai-grade-note{
+  display:flex;
+  align-items:center;
+  gap:6px;
   margin-top:12px;
-  border:1px dashed #d8d0f8;
-  background:#fbfaff;
+  border:1px solid #d8d0f8;
+  background:#f8f6ff;
   border-radius:11px;
   padding:10px 12px;
-  color:#7b8095;
+  color:#676c88;
   font-size:12px;
-  line-height:1.65;
 }
 
-.ai-help code{
-  background:white;
-  border:1px solid #e9e7f4;
-  border-radius:6px;
-  padding:2px 5px;
-  color:#6955db;
+.ai-grade-note b{
+  color:#5d48d2;
+  font-size:13px;
+}
+
+.ai-grade-note span{
+  margin-left:auto;
+  color:#9296aa;
 }
 
 .ai-actions{
@@ -181,6 +179,7 @@
 .ai-actions .save{
   border:0;
   color:white;
+  width:100%;
 }
 
 .ai-actions button:disabled{
@@ -256,8 +255,14 @@
 }
 
 @media(max-width:760px){
-  .ai-config{
-    grid-template-columns:1fr;
+  .ai-grade-note{
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .ai-grade-note span{
+    width:100%;
+    margin-left:0;
   }
 
   .ai-result-head{
