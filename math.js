@@ -64,7 +64,8 @@ function cardHtml(x){
   const created=new Date(x.at||Date.now()).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'});
   const reviewed=x.lastReviewedAt?new Date(x.lastReviewedAt).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'}):'—';
   const aiReady=aiExplanationIsCurrent(x),aiState=x.aiBackground?.status||'';
-  const aiBadge=aiReady?'<div class="q-ai-preview">AI讲解已准备好</div>':aiState==='generating'?'<div class="q-ai-preview generating">AI正在后台讲解</div>':aiState==='queued'?'<div class="q-ai-preview queued">等待AI后台讲解</div>':aiState==='failed'?'<div class="q-ai-preview failed">AI将在稍后重试</div>':'';
+  const aiFailure=esc(String(x.aiBackground?.error||'AI将在稍后自动重试').slice(0,34));
+  const aiBadge=aiReady?'<div class="q-ai-preview">AI讲解已准备好</div>':aiState==='generating'?'<div class="q-ai-preview generating">AI正在后台讲解</div>':aiState==='queued'?'<div class="q-ai-preview queued">等待AI后台讲解</div>':aiState==='failed'?`<div class="q-ai-preview failed" title="${esc(x.aiBackground?.error||'')}">${aiFailure}</div>`:'';
   return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}${aiBadge}<button type="button" class="q-ai-main" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)"><b>AI</b><span>${aiReady?'直接查看AI讲解':aiState==='generating'?'AI正在后台讲解':'让AI讲解这道题'}</span></button><div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button type="button" onclick="openEdit('${x.id}')">编辑</button><button type="button" class="q-ai-action" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)">AI讲解</button><button type="button" onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
 }
 
@@ -158,7 +159,8 @@ function openAiExplain(id){
   $('aiGenerateBtn').style.display='';
   const ready=aiExplanationIsCurrent(q);
   $('aiGenerateBtn').textContent=ready?'重新生成AI讲解':'立即生成AI讲解';
-  setAiStatus(ready?'已直接读取后台准备好的讲解。':q.aiBackground?.status==='generating'?'这道题正在后台讲解，完成后会自动保存。':'这道题已加入AI后台讲解队列。',ready?'success':'loading');
+  const pendingMessage=q.aiBackground?.status==='failed'?`上次生成失败：${q.aiBackground.error||'系统将在稍后自动重试'}`:q.aiBackground?.status==='generating'?'这道题正在后台讲解，完成后会自动保存。':'这道题已加入AI后台讲解队列。';
+  setAiStatus(ready?'已直接读取后台准备好的讲解。':pendingMessage,ready?'success':q.aiBackground?.status==='failed'?'error':'loading');
   renderAiResult(ready?q.aiExplanation:null);
   $('aiOverlay').classList.add('open');
   if(!ready)queueMissingAiExplanations([id]);
@@ -242,9 +244,17 @@ async function requestAiExplanation(prompt,q,hint,grade){
   const body={question:q.q||'',subject:'数学',grade,correctAnswer:q.a||'',wrongAnswer:hint||'',knowledgePoint:q.tag||'',model:AI_MODEL,prompt};
   try{
     const res=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    return parseAiResponse(await res.json());
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||`AI服务返回 HTTP ${res.status}`);
+    return parseAiResponse(data);
   }finally{clearTimeout(timer)}
+}
+
+function friendlyAiError(error){
+  if(error?.name==='AbortError')return '本地模型生成超时';
+  if(error?.message==='GRADE_VIOLATION')return '讲解未通过当前年级知识范围检查';
+  if(error?.message==='EMPTY_AI_RESPONSE')return '本地模型没有返回讲解内容';
+  return String(error?.message||'本地AI服务暂时不可用').slice(0,120);
 }
 
 function answerExceedsGrade(text,grade){
@@ -314,7 +324,7 @@ async function processAiBackgroundQueue(){
     const current=getQuestion(id);
     if(current){
       const attempts=Number(current.aiBackground?.attempts)||1;
-      current.aiBackground={status:'failed',attempts,failedAt:Date.now(),nextRetryAt:Date.now()+(attempts<3?120000:1800000)};
+      current.aiBackground={status:'failed',error:friendlyAiError(error),attempts,failedAt:Date.now(),nextRetryAt:Date.now()+(attempts<3?120000:1800000)};
       save();render();
       if(attempts<3)setTimeout(()=>queueMissingAiExplanations([id]),120500);
     }
@@ -357,7 +367,7 @@ async function generateAiExplanation(){
     }
   }catch(error){
     console.error(error);
-    const message=error.name==='AbortError'?'生成超时，请稍后再试。':error.message==='GRADE_VIOLATION'?`讲解未通过${grade}知识范围检查，请重新生成。`:'AI讲解暂时无法生成，请确认本地AI服务已启动后重试。';
+    const message=friendlyAiError(error);
     setAiStatus(message,'error');
   }finally{
     aiGenerating=false;
