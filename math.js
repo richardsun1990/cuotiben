@@ -4,13 +4,14 @@ const PROFILE_KEY='dudu_user_profile_v1';
 const AI_ENDPOINT='/api/ai/explain';
 const AI_MODEL='qwen3:1.7b';
 const AI_REQUEST_TIMEOUT=300000;
+const AI_GRADE_POLICY_VERSION=2;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const statusLabel={wrong:'未掌握',review:'复习中',done:'已掌握'};
 let qs=[];
 try{qs=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{qs=[]}
 if(!Array.isArray(qs))qs=[];
-qs=qs.map(q=>{const copy={...q,id:String(q.id||uid()),subject:q.subject||'数学'};delete copy.ansImg;return copy});
+qs=qs.map(q=>{const copy={...q,id:String(q.id||uid()),subject:q.subject||'数学'};delete copy.ansImg;if(copy.aiBackground?.error==='讲解未通过当前年级知识范围检查'&&copy.aiBackground.policyVersion!==AI_GRADE_POLICY_VERSION)copy.aiBackground={status:'queued',queuedAt:Date.now(),attempts:0,policyVersion:AI_GRADE_POLICY_VERSION};return copy});
 let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false,aiBackgroundWorking=false;
 const aiBackgroundQueue=[];
 
@@ -260,8 +261,8 @@ function friendlyAiError(error){
 function answerExceedsGrade(text,grade){
   const level=gradeLevel(grade);
   if(level>4)return false;
-  const compact=String(text||'').replace(/\s+/g,'');
-  return /(^|[^A-Za-z])[xyzXYZ]([^A-Za-z]|$)|未知数|方程|一元[一二]次|代数式|函数/.test(compact);
+  const compact=String(text||'').replace(/\s+/g,'').replace(/(?:不需要|不用|不要|无需|不必|不能|避免|禁止)(?:使用|采用|去)?(?:列方程|解方程|方程组|代数式|函数)/g,'');
+  return /(^|[^A-Za-z])[xyzXYZ]([^A-Za-z]|$)|列方程|解方程|方程组|一元[一二]次方程|二次方程|代数式|函数/.test(compact);
 }
 
 async function generateCheckedAiText(q,hint,grade){
@@ -324,7 +325,7 @@ async function processAiBackgroundQueue(){
     const current=getQuestion(id);
     if(current){
       const attempts=Number(current.aiBackground?.attempts)||1;
-      current.aiBackground={status:'failed',error:friendlyAiError(error),attempts,failedAt:Date.now(),nextRetryAt:Date.now()+(attempts<3?120000:1800000)};
+      current.aiBackground={status:'failed',error:friendlyAiError(error),policyVersion:AI_GRADE_POLICY_VERSION,attempts,failedAt:Date.now(),nextRetryAt:Date.now()+(attempts<3?120000:1800000)};
       save();render();
       if(attempts<3)setTimeout(()=>queueMissingAiExplanations([id]),120500);
     }
