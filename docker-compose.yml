@@ -1,0 +1,18 @@
+services:
+  dudu-cuotuiben:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: dudu-cuotuiben
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/data
+    environment:
+      DUDU_SYNC_TOKEN: ${DUDU_SYNC_TOKEN:-dudu-local-sync}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      DUDU_AI_MODEL: ${DUDU_AI_MODEL:-qwen3:1.7b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
