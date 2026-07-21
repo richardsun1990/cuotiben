@@ -198,7 +198,9 @@ function handleStatic(req, res, pathname) {
     const ext = path.extname(filePath);
     res.writeHead(200, {
       'content-type': MIME[ext] || 'application/octet-stream',
-      'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
+      // 飞牛家庭部署优先保证更新立即可见，避免旧 CSS/JS/SVG
+      // 在浏览器中继续缓存一小时，造成“代码已更新但页面没变”。
+      'cache-control': 'no-cache, must-revalidate'
     });
     fs.createReadStream(filePath).pipe(res);
   });
