@@ -3,6 +3,7 @@ const MATH_ACTIVITY_KEY='dudu_math_activity_v1';
 const PROFILE_KEY='dudu_user_profile_v1';
 const AI_ENDPOINT='/api/ai/explain';
 const AI_MODEL='qwen3:1.7b';
+const AI_REQUEST_TIMEOUT=300000;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const statusLabel={wrong:'未掌握',review:'复习中',done:'已掌握'};
@@ -10,7 +11,8 @@ let qs=[];
 try{qs=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{qs=[]}
 if(!Array.isArray(qs))qs=[];
 qs=qs.map(q=>{const copy={...q,id:String(q.id||uid()),subject:q.subject||'数学'};delete copy.ansImg;return copy});
-let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false;
+let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false,aiBackgroundWorking=false;
+const aiBackgroundQueue=[];
 
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(qs));return true}
@@ -61,7 +63,9 @@ function cardHtml(x){
   const checked=selected.has(x.id);
   const created=new Date(x.at||Date.now()).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'});
   const reviewed=x.lastReviewedAt?new Date(x.lastReviewedAt).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'}):'—';
-  return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}${x.aiExplanation?.text?`<div class="q-ai-preview">已有AI讲解</div>`:''}<button type="button" class="q-ai-main" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)"><b>AI</b><span>${x.aiExplanation?.text?'查看 / 重新生成AI讲解':'让AI讲解这道题'}</span></button><div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button type="button" onclick="openEdit('${x.id}')">编辑</button><button type="button" class="q-ai-action" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)">AI讲解</button><button type="button" onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
+  const aiReady=aiExplanationIsCurrent(x),aiState=x.aiBackground?.status||'';
+  const aiBadge=aiReady?'<div class="q-ai-preview">AI讲解已准备好</div>':aiState==='generating'?'<div class="q-ai-preview generating">AI正在后台讲解</div>':aiState==='queued'?'<div class="q-ai-preview queued">等待AI后台讲解</div>':aiState==='failed'?'<div class="q-ai-preview failed">AI将在稍后重试</div>':'';
+  return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}${aiBadge}<button type="button" class="q-ai-main" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)"><b>AI</b><span>${aiReady?'直接查看AI讲解':aiState==='generating'?'AI正在后台讲解':'让AI讲解这道题'}</span></button><div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button type="button" onclick="openEdit('${x.id}')">编辑</button><button type="button" class="q-ai-action" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)">AI讲解</button><button type="button" onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
 }
 
 function enableSelection(){selectionMode=true;$('batchBar').classList.add('show');toast('请勾选需要统一管理的错题')}
@@ -78,7 +82,7 @@ function deleteSelected(){if(!selected.size){toast('请先选择错题');return}
 function openAdd(){editId=null;$('modalTitle').textContent='新增数学错题';['fQ','fA','fTag','fReason'].forEach(id=>$(id).value='');$('fStatus').value='wrong';$('editOverlay').classList.add('open');setTimeout(()=>$('fQ').focus(),100)}
 function openEdit(id){const x=getQuestion(id);if(!x)return;editId=id;$('modalTitle').textContent='编辑数学错题';$('fQ').value=x.q||'';$('fA').value=x.a||'';$('fTag').value=x.tag||'';$('fReason').value=x.reason||'';$('fStatus').value=x.status||'wrong';$('editOverlay').classList.add('open')}
 function closeEdit(){$('editOverlay').classList.remove('open')}
-function saveQuestion(){const text=$('fQ').value.trim();if(!text){toast('请填写题目内容');$('fQ').focus();return}const data={q:text,a:$('fA').value.trim(),subject:'数学',tag:$('fTag').value.trim(),reason:$('fReason').value.trim(),status:$('fStatus').value};if(editId){const x=getQuestion(editId);if(!x)return;Object.assign(x,data,{edited:Date.now()})}else qs.unshift({...data,id:uid(),at:Date.now(),lastReviewedAt:null,correctStreak:0});if(save()){closeEdit();render();toast(editId?'错题已更新':'数学错题已添加')}}
+function saveQuestion(){const text=$('fQ').value.trim();if(!text){toast('请填写题目内容');$('fQ').focus();return}const data={q:text,a:$('fA').value.trim(),subject:'数学',tag:$('fTag').value.trim(),reason:$('fReason').value.trim(),status:$('fStatus').value};let targetId=editId,needsNewAi=false;if(editId){const x=getQuestion(editId);if(!x)return;needsNewAi=x.q!==data.q||x.a!==data.a||x.tag!==data.tag;Object.assign(x,data,{edited:Date.now()});if(needsNewAi){delete x.aiExplanation;x.aiBackground={status:'queued',queuedAt:Date.now(),attempts:0}}}else{const item={...data,id:uid(),at:Date.now(),lastReviewedAt:null,correctStreak:0,aiBackground:{status:'queued',queuedAt:Date.now(),attempts:0}};qs.unshift(item);targetId=item.id;needsNewAi=true}if(save()){closeEdit();render();if(needsNewAi)queueMissingAiExplanations([targetId]);toast(editId?(needsNewAi?'错题已更新，AI将在后台重新讲解':'错题已更新'):'错题已添加，AI正在后台准备讲解')}}
 function removeQuestion(id){if(!confirm('确定删除这道数学错题吗？删除后可在 10 秒内撤销。'))return;qs=qs.filter(q=>q.id!==id);selected.delete(id);if(save()){render();toast('错题已删除')}}
 
 function sourceQuestions(source){if(source==='selected')return mathQuestions().filter(q=>selected.has(q.id));if(source==='filtered')return [...lastFiltered];if(source==='wrong')return mathQuestions().filter(q=>q.status==='wrong');return mathQuestions()}
@@ -152,10 +156,12 @@ function openAiExplain(id){
   $('aiHint').value=q.aiHint||'';
   applyAiGradeLabel();
   $('aiGenerateBtn').style.display='';
-  $('aiGenerateBtn').textContent=q.aiExplanation?.text?'重新生成AI讲解':'生成AI讲解';
-  setAiStatus('');
-  renderAiResult(q.aiExplanation);
+  const ready=aiExplanationIsCurrent(q);
+  $('aiGenerateBtn').textContent=ready?'重新生成AI讲解':'立即生成AI讲解';
+  setAiStatus(ready?'已直接读取后台准备好的讲解。':q.aiBackground?.status==='generating'?'这道题正在后台讲解，完成后会自动保存。':'这道题已加入AI后台讲解队列。',ready?'success':'loading');
+  renderAiResult(ready?q.aiExplanation:null);
   $('aiOverlay').classList.add('open');
+  if(!ready)queueMissingAiExplanations([id]);
 }
 
 function closeAiExplain(){
@@ -232,7 +238,7 @@ function parseAiResponse(data){
 
 async function requestAiExplanation(prompt,q,hint,grade){
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),90000);
+  const timer=setTimeout(()=>controller.abort(),AI_REQUEST_TIMEOUT);
   const body={question:q.q||'',subject:'数学',grade,correctAnswer:q.a||'',wrongAnswer:hint||'',knowledgePoint:q.tag||'',model:AI_MODEL,prompt};
   try{
     const res=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
@@ -248,27 +254,91 @@ function answerExceedsGrade(text,grade){
   return /(^|[^A-Za-z])[xyzXYZ]([^A-Za-z]|$)|未知数|方程|一元[一二]次|代数式|函数/.test(compact);
 }
 
+async function generateCheckedAiText(q,hint,grade){
+  const prompt=buildAiPrompt(q,hint);
+  let text=await requestAiExplanation(prompt,q,hint,grade);
+  if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
+  if(answerExceedsGrade(text,grade)){
+    const retryPrompt=`${prompt}\n\n上一次回答使用了超出${grade}范围的字母未知数、方程或代数方法。请完全重写，严格遵守：${gradeMethodRules(grade)}不要解释被禁止的方法，也不要在答案中出现 x、y、z 或“列方程”等表述。`;
+    text=await requestAiExplanation(retryPrompt,q,hint,grade);
+    if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
+    if(answerExceedsGrade(text,grade))throw new Error('GRADE_VIOLATION');
+  }
+  return text.trim();
+}
+
+function aiExplanationIsCurrent(q,grade=getLearnerGrade()){
+  return !!q?.aiExplanation?.text&&q.aiExplanation.grade===grade;
+}
+
+function queueMissingAiExplanations(ids){
+  const grade=getLearnerGrade(),wanted=ids?new Set(ids.map(String)):null;
+  let added=0;
+  mathQuestions().forEach(q=>{
+    if(wanted&&!wanted.has(String(q.id)))return;
+    if(aiExplanationIsCurrent(q,grade))return;
+    if(q.aiBackground?.nextRetryAt>Date.now()){
+      const wait=Math.min(q.aiBackground.nextRetryAt-Date.now()+500,2147483000);
+      setTimeout(()=>queueMissingAiExplanations([q.id]),wait);return;
+    }
+    if(aiBackgroundQueue.includes(String(q.id)))return;
+    q.aiBackground={status:'queued',queuedAt:Date.now(),attempts:Number(q.aiBackground?.attempts)||0};
+    aiBackgroundQueue.push(String(q.id));added++;
+  });
+  if(added){save();render()}
+  processAiBackgroundQueue();
+  return added;
+}
+
+async function processAiBackgroundQueue(){
+  if(aiBackgroundWorking||aiGenerating)return;
+  const id=aiBackgroundQueue.shift();
+  if(!id)return;
+  const q=getQuestion(id),grade=getLearnerGrade();
+  if(!q||aiExplanationIsCurrent(q,grade)){setTimeout(processAiBackgroundQueue,300);return}
+  aiBackgroundWorking=true;
+  const snapshot=[q.q||'',q.a||'',q.tag||'',grade].join('\u0001');
+  q.aiBackground={status:'generating',startedAt:Date.now(),attempts:(Number(q.aiBackground?.attempts)||0)+1};
+  save();render();
+  try{
+    const text=await generateCheckedAiText(q,q.aiHint||'',grade);
+    const current=getQuestion(id),currentSnapshot=current?[current.q||'',current.a||'',current.tag||'',getLearnerGrade()].join('\u0001'):'';
+    if(current&&currentSnapshot===snapshot){
+      current.aiExplanation={text,grade,at:Date.now(),source:'background'};
+      delete current.aiBackground;
+      current.edited=Date.now();
+      save();render();
+    }
+  }catch(error){
+    console.error('后台AI讲解失败',error);
+    const current=getQuestion(id);
+    if(current){
+      const attempts=Number(current.aiBackground?.attempts)||1;
+      current.aiBackground={status:'failed',attempts,failedAt:Date.now(),nextRetryAt:Date.now()+(attempts<3?120000:1800000)};
+      save();render();
+      if(attempts<3)setTimeout(()=>queueMissingAiExplanations([id]),120500);
+    }
+  }finally{
+    aiBackgroundWorking=false;
+    setTimeout(processAiBackgroundQueue,1200);
+  }
+}
+
+window.queueMissingAiExplanations=queueMissingAiExplanations;
+
 async function generateAiExplanation(){
   if(aiGenerating)return;
+  if(aiBackgroundWorking){setAiStatus('AI正在后台讲解其他题，完成当前题后可以再生成。已有讲解不受影响。','loading');return}
   const storedQuestion=getQuestion(aiQuestionId);
   const q=storedQuestion||buildDirectAiQuestion();
   if(!q){toast('请先输入题目内容');$('aiQuestionInput')?.focus();return}
   const hint=($('aiHint')?.value||'').trim();
   const grade=getLearnerGrade();
-  const prompt=buildAiPrompt(q,hint);
   aiGenerating=true;
   $('aiGenerateBtn').disabled=true;
   setAiStatus(`正在按${grade}知识范围生成讲解，请稍候……`,'loading');
   try{
-    let text=await requestAiExplanation(prompt,q,hint,grade);
-    if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
-    if(answerExceedsGrade(text,grade)){
-      setAiStatus(`正在检查${grade}知识范围，并重新整理讲解……`,'loading');
-      const retryPrompt=`${prompt}\n\n上一次回答使用了超出${grade}范围的字母未知数、方程或代数方法。请完全重写，严格遵守：${gradeMethodRules(grade)}不要解释被禁止的方法，也不要在答案中出现 x、y、z 或“列方程”等表述。`;
-      text=await requestAiExplanation(retryPrompt,q,hint,grade);
-      if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
-      if(answerExceedsGrade(text,grade))throw new Error('GRADE_VIOLATION');
-    }
+    const text=await generateCheckedAiText(q,hint,grade);
     if(storedQuestion){
       q.aiHint=hint;
       q.aiExplanation={text:text.trim(),grade,at:Date.now()};
@@ -292,8 +362,13 @@ async function generateAiExplanation(){
   }finally{
     aiGenerating=false;
     $('aiGenerateBtn').disabled=false;
+    setTimeout(processAiBackgroundQueue,500);
   }
 }
 
 window.addEventListener('afterprint',()=>document.body.classList.remove('printing-paper'));
 save();refreshTagSuggestions();render();
+setTimeout(()=>{
+  const grade=getLearnerGrade();
+  queueMissingAiExplanations(mathQuestions().filter(q=>q.aiBackground&&!aiExplanationIsCurrent(q,grade)||q.aiExplanation?.text&&q.aiExplanation.grade!==grade).map(q=>q.id));
+},1800);
