@@ -1,0 +1,45 @@
+/* Final local illustration mapping.
+   This file is intentionally loaded last so legacy theme rules cannot replace
+   the transparent PNGs with expired remote URLs or non-transparent SVG crops. */
+body .hero-art {
+  content: url("assets/cats/home-study.png?v=20260721-6") !important;
+}
+
+body .left-cat,
+body .side-cat,
+body .eng-side-cat {
+  content: url("assets/cats/side-sleep.png?v=20260721-6") !important;
+}
+
+body .right-cat,
+body .challenge img,
+body .eng-stats strong.star img {
+  content: url("assets/cats/cheer.png?v=20260721-6") !important;
+}
+
+body .welcome img {
+  content: url("assets/cats/math-banner.png?v=20260721-6") !important;
+}
+
+body .eng-hero > img {
+  content: url("assets/cats/english-study.png?v=20260721-6") !important;
+}
+
+body .words-title > img {
+  content: url("assets/cats/cat-book.png?v=20260721-6") !important;
+}
+
+body .hero-art,
+body .left-cat,
+body .right-cat,
+body .side-cat,
+body .eng-side-cat,
+body .welcome img,
+body .eng-hero > img,
+body .challenge img,
+body .eng-stats strong.star img,
+body .words-title > img {
+  background: transparent !important;
+  object-fit: contain !important;
+  pointer-events: none !important;
+}
