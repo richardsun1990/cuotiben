@@ -12,7 +12,7 @@ let qs=[];
 try{qs=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{qs=[]}
 if(!Array.isArray(qs))qs=[];
 qs=qs.map(q=>{const copy={...q,id:String(q.id||uid()),subject:q.subject||'数学'};delete copy.ansImg;if(copy.aiBackground?.error==='讲解未通过当前年级知识范围检查'&&copy.aiBackground.policyVersion!==AI_GRADE_POLICY_VERSION)copy.aiBackground={status:'queued',queuedAt:Date.now(),attempts:0,policyVersion:AI_GRADE_POLICY_VERSION};return copy});
-let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false,aiBackgroundWorking=false;
+let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false,aiBackgroundWorking=false,aiBackgroundCurrentId=null,aiBackgroundController=null,aiPriorityQuestionId=null,aiManualStartRequested=false;
 const aiBackgroundQueue=[];
 
 function save(){
@@ -164,7 +164,7 @@ function openAiExplain(id){
   setAiStatus(ready?'已直接读取后台准备好的讲解。':pendingMessage,ready?'success':q.aiBackground?.status==='failed'?'error':'loading');
   renderAiResult(ready?q.aiExplanation:null);
   $('aiOverlay').classList.add('open');
-  if(!ready)queueMissingAiExplanations([id]);
+  if(!ready)queueMissingAiExplanations([id],{priority:true});
 }
 
 function closeAiExplain(){
@@ -197,14 +197,14 @@ function formatAiText(text){
 
 function buildAiPrompt(q,hint){
   const grade=getLearnerGrade();
-  return `你是一位耐心的数学老师，正在给${grade}孩子讲一道不会的题。请用中文回答，语气温和、清楚、不要太长。
+  return `你是一位耐心的数学老师，正在给${grade}孩子讲一道不会的题。请用中文回答，语气温和、清楚，总字数控制在250字以内。
 
 要求：
 1. 必须严格按${grade}课内水平讲解，不得使用高年级或中学知识。${gradeMethodRules(grade)}
 2. 不要默认孩子已经在 iPad 上作答；孩子可能是在本子上做题。
 3. 孩子错误答案/卡住点是可选信息，没有提供时不要编造。
 4. 如果题目信息不足，请先指出缺少什么，不要硬编答案。
-5. 每一步都说明为什么，尽量使用孩子熟悉的数字、图意或生活情境。
+5. 只保留必要步骤，每一步简短说明为什么，尽量使用孩子熟悉的数字、图意或生活情境。
 6. 最后自查：方法和术语是否确实属于${grade}；若超纲，必须改成该年级能懂的方法。
 7. 最后给一道很短的同类小练习，不要使用超纲知识。
 
@@ -239,16 +239,19 @@ function parseAiResponse(data){
   return data?.explanation||data?.text||data?.content||data?.message?.content||data?.response||data?.choices?.[0]?.message?.content||'';
 }
 
-async function requestAiExplanation(prompt,q,hint,grade){
+async function requestAiExplanation(prompt,q,hint,grade,externalSignal=null){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),AI_REQUEST_TIMEOUT);
+  const abort=()=>controller.abort();
+  if(externalSignal?.aborted)controller.abort();
+  else externalSignal?.addEventListener('abort',abort,{once:true});
   const body={question:q.q||'',subject:'数学',grade,correctAnswer:q.a||'',wrongAnswer:hint||'',knowledgePoint:q.tag||'',model:AI_MODEL,prompt};
   try{
     const res=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.error||`AI服务返回 HTTP ${res.status}`);
     return parseAiResponse(data);
-  }finally{clearTimeout(timer)}
+  }finally{clearTimeout(timer);externalSignal?.removeEventListener('abort',abort)}
 }
 
 function friendlyAiError(error){
@@ -265,13 +268,13 @@ function answerExceedsGrade(text,grade){
   return /(^|[^A-Za-z])[xyzXYZ]([^A-Za-z]|$)|列方程|解方程|方程组|一元[一二]次方程|二次方程|代数式|函数/.test(compact);
 }
 
-async function generateCheckedAiText(q,hint,grade){
+async function generateCheckedAiText(q,hint,grade,signal=null){
   const prompt=buildAiPrompt(q,hint);
-  let text=await requestAiExplanation(prompt,q,hint,grade);
+  let text=await requestAiExplanation(prompt,q,hint,grade,signal);
   if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
   if(answerExceedsGrade(text,grade)){
     const retryPrompt=`${prompt}\n\n上一次回答使用了超出${grade}范围的字母未知数、方程或代数方法。请完全重写，严格遵守：${gradeMethodRules(grade)}不要解释被禁止的方法，也不要在答案中出现 x、y、z 或“列方程”等表述。`;
-    text=await requestAiExplanation(retryPrompt,q,hint,grade);
+    text=await requestAiExplanation(`${retryPrompt}\n请在250字以内完成。`,q,hint,grade,signal);
     if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
     if(answerExceedsGrade(text,grade))throw new Error('GRADE_VIOLATION');
   }
@@ -282,21 +285,29 @@ function aiExplanationIsCurrent(q,grade=getLearnerGrade()){
   return !!q?.aiExplanation?.text&&q.aiExplanation.grade===grade;
 }
 
-function queueMissingAiExplanations(ids){
-  const grade=getLearnerGrade(),wanted=ids?new Set(ids.map(String)):null;
+function queueMissingAiExplanations(ids,options={}){
+  const grade=getLearnerGrade(),wanted=ids?new Set(ids.map(String)):null,priority=!!options.priority;
   let added=0;
   mathQuestions().forEach(q=>{
     if(wanted&&!wanted.has(String(q.id)))return;
     if(aiExplanationIsCurrent(q,grade))return;
-    if(q.aiBackground?.nextRetryAt>Date.now()){
+    if(aiBackgroundWorking&&String(aiBackgroundCurrentId)===String(q.id))return;
+    if(!priority&&q.aiBackground?.nextRetryAt>Date.now()){
       const wait=Math.min(q.aiBackground.nextRetryAt-Date.now()+500,2147483000);
       setTimeout(()=>queueMissingAiExplanations([q.id]),wait);return;
     }
-    if(aiBackgroundQueue.includes(String(q.id)))return;
+    const queueIndex=aiBackgroundQueue.indexOf(String(q.id));
+    if(queueIndex>=0){
+      if(priority){aiBackgroundQueue.splice(queueIndex,1);aiBackgroundQueue.unshift(String(q.id));aiPriorityQuestionId=String(q.id)}
+      return;
+    }
     q.aiBackground={status:'queued',queuedAt:Date.now(),attempts:Number(q.aiBackground?.attempts)||0};
-    aiBackgroundQueue.push(String(q.id));added++;
+    priority?aiBackgroundQueue.unshift(String(q.id)):aiBackgroundQueue.push(String(q.id));
+    if(priority)aiPriorityQuestionId=String(q.id);
+    added++;
   });
   if(added){save();render()}
+  if(priority&&aiBackgroundWorking&&aiBackgroundCurrentId!==aiPriorityQuestionId)aiBackgroundController?.abort();
   processAiBackgroundQueue();
   return added;
 }
@@ -308,30 +319,49 @@ async function processAiBackgroundQueue(){
   const q=getQuestion(id),grade=getLearnerGrade();
   if(!q||aiExplanationIsCurrent(q,grade)){setTimeout(processAiBackgroundQueue,300);return}
   aiBackgroundWorking=true;
+  aiBackgroundCurrentId=String(id);
+  aiBackgroundController=new AbortController();
+  if(aiPriorityQuestionId===String(id))aiPriorityQuestionId=null;
   const snapshot=[q.q||'',q.a||'',q.tag||'',grade].join('\u0001');
   q.aiBackground={status:'generating',startedAt:Date.now(),attempts:(Number(q.aiBackground?.attempts)||0)+1};
   save();render();
   try{
-    const text=await generateCheckedAiText(q,q.aiHint||'',grade);
+    const text=await generateCheckedAiText(q,q.aiHint||'',grade,aiBackgroundController.signal);
     const current=getQuestion(id),currentSnapshot=current?[current.q||'',current.a||'',current.tag||'',getLearnerGrade()].join('\u0001'):'';
     if(current&&currentSnapshot===snapshot){
       current.aiExplanation={text,grade,at:Date.now(),source:'background'};
       delete current.aiBackground;
       current.edited=Date.now();
       save();render();
+      if(String(aiQuestionId)===String(id)){
+        renderAiResult(current.aiExplanation);
+        setAiStatus('这道题已优先完成并保存。','success');
+        $('aiGenerateBtn').textContent='重新生成AI讲解';
+      }
     }
   }catch(error){
     console.error('后台AI讲解失败',error);
     const current=getQuestion(id);
-    if(current){
+    const interrupted=error.name==='AbortError'&&(aiManualStartRequested||aiPriorityQuestionId&&aiPriorityQuestionId!==String(id));
+    if(current&&interrupted){
+      current.aiBackground={status:'queued',queuedAt:Date.now(),attempts:Math.max(0,(Number(current.aiBackground?.attempts)||1)-1)};
+      if(!aiBackgroundQueue.includes(String(id)))aiBackgroundQueue.push(String(id));
+      save();render();
+    }else if(current){
       const attempts=Number(current.aiBackground?.attempts)||1;
       current.aiBackground={status:'failed',error:friendlyAiError(error),policyVersion:AI_GRADE_POLICY_VERSION,attempts,failedAt:Date.now(),nextRetryAt:Date.now()+(attempts<3?120000:1800000)};
       save();render();
-      if(attempts<3)setTimeout(()=>queueMissingAiExplanations([id]),120500);
+      setTimeout(()=>queueMissingAiExplanations([id]),attempts<3?120500:1800500);
+      if(String(aiQuestionId)===String(id))setAiStatus(`生成失败：${current.aiBackground.error}。队列已继续处理下一题。`,'error');
     }
   }finally{
     aiBackgroundWorking=false;
-    setTimeout(processAiBackgroundQueue,1200);
+    aiBackgroundCurrentId=null;
+    aiBackgroundController=null;
+    if(aiManualStartRequested){
+      aiManualStartRequested=false;
+      setTimeout(generateAiExplanation,150);
+    }else setTimeout(processAiBackgroundQueue,600);
   }
 }
 
@@ -339,12 +369,22 @@ window.queueMissingAiExplanations=queueMissingAiExplanations;
 
 async function generateAiExplanation(){
   if(aiGenerating)return;
-  if(aiBackgroundWorking){setAiStatus('AI正在后台讲解其他题，完成当前题后可以再生成。已有讲解不受影响。','loading');return}
+  if(aiBackgroundWorking){
+    if(aiQuestionId&&String(aiBackgroundCurrentId)===String(aiQuestionId)){setAiStatus('这道题已经在优先生成，请稍候。','loading');return}
+    aiManualStartRequested=true;
+    aiBackgroundController?.abort();
+    setAiStatus('已暂停自动队列，正在优先处理你选择的题目……','loading');
+    return;
+  }
   const storedQuestion=getQuestion(aiQuestionId);
   const q=storedQuestion||buildDirectAiQuestion();
   if(!q){toast('请先输入题目内容');$('aiQuestionInput')?.focus();return}
   const hint=($('aiHint')?.value||'').trim();
   const grade=getLearnerGrade();
+  if(storedQuestion){
+    const index=aiBackgroundQueue.indexOf(String(storedQuestion.id));
+    if(index>=0)aiBackgroundQueue.splice(index,1);
+  }
   aiGenerating=true;
   $('aiGenerateBtn').disabled=true;
   setAiStatus(`正在按${grade}知识范围生成讲解，请稍候……`,'loading');
@@ -353,6 +393,7 @@ async function generateAiExplanation(){
     if(storedQuestion){
       q.aiHint=hint;
       q.aiExplanation={text:text.trim(),grade,at:Date.now()};
+      delete q.aiBackground;
       q.edited=Date.now();
       if(save()){
         renderAiResult(q.aiExplanation);
@@ -369,6 +410,7 @@ async function generateAiExplanation(){
   }catch(error){
     console.error(error);
     const message=friendlyAiError(error);
+    if(storedQuestion){storedQuestion.aiBackground={status:'failed',error:message,policyVersion:AI_GRADE_POLICY_VERSION,attempts:Number(storedQuestion.aiBackground?.attempts)||1,failedAt:Date.now(),nextRetryAt:Date.now()+600000};save();render();setTimeout(()=>queueMissingAiExplanations([storedQuestion.id]),600500)}
     setAiStatus(message,'error');
   }finally{
     aiGenerating=false;
@@ -380,6 +422,5 @@ async function generateAiExplanation(){
 window.addEventListener('afterprint',()=>document.body.classList.remove('printing-paper'));
 save();refreshTagSuggestions();render();
 setTimeout(()=>{
-  const grade=getLearnerGrade();
-  queueMissingAiExplanations(mathQuestions().filter(q=>q.aiBackground&&!aiExplanationIsCurrent(q,grade)||q.aiExplanation?.text&&q.aiExplanation.grade!==grade).map(q=>q.id));
+  queueMissingAiExplanations();
 },1800);
