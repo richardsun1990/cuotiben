@@ -10,6 +10,53 @@
   font-weight:700;
 }
 
+.top-data-tools .ai-tool-btn{
+  border-color:#cfc7f7!important;
+  background:#f5f2ff!important;
+  color:var(--brand,var(--purple))!important;
+}
+
+.top-data-tools .ai-tool-btn i{
+  width:22px;
+  height:22px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  background:var(--brand,var(--purple));
+  color:#fff;
+  font-size:11px!important;
+  font-weight:800;
+}
+
+.quick-actions{
+  grid-template-columns:repeat(5,minmax(0,1fr)) 1.25fr!important;
+  height:auto!important;
+}
+
+.quick-actions>button{
+  min-height:72px;
+}
+
+@media(max-width:1280px){
+  .quick-actions{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+
+  .challenge{
+    grid-column:1/-1;
+  }
+}
+
+@media(max-width:820px){
+  .quick-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  .top-data-tools .ai-tool-btn{
+    display:inline-flex!important;
+  }
+}
+
 .ai-modal{
   width:min(760px,94vw);
 }
