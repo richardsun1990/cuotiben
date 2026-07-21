@@ -14,5 +14,7 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       DUDU_AI_MODEL: ${DUDU_AI_MODEL:-qwen3:1.7b}
+      NO_PROXY: ${NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
+      no_proxy: ${no_proxy:-127.0.0.1,localhost,host.docker.internal}
     extra_hosts:
       - "host.docker.internal:host-gateway"
