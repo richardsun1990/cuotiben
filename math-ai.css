@@ -81,6 +81,11 @@
   color:#303553;
 }
 
+.ai-question-field textarea{
+  min-height:132px;
+  line-height:1.65;
+}
+
 .ai-question-preview span,
 .ai-question-preview small{
   display:block;
