@@ -7,7 +7,7 @@ const statusLabel={wrong:'未掌握',review:'复习中',done:'已掌握'};
 let qs=[];
 try{qs=JSON.parse(localStorage.getItem(KEY)||'[]')}catch{qs=[]}
 if(!Array.isArray(qs))qs=[];
-qs=qs.map(q=>{const copy={...q,subject:q.subject||'数学'};delete copy.ansImg;return copy});
+qs=qs.map(q=>{const copy={...q,id:String(q.id||uid()),subject:q.subject||'数学'};delete copy.ansImg;return copy});
 let status='all',editId=null,selected=new Set(),selectionMode=false,lastFiltered=[],paperQuestions=[],aiQuestionId=null,aiGenerating=false;
 
 function save(){
@@ -17,7 +17,7 @@ function save(){
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function toast(text){const e=$('toast');if(!e){alert(text);return}e.textContent=text;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
 function mathQuestions(){return qs.filter(q=>q.subject==='数学')}
-function getQuestion(id){return qs.find(q=>q.id===id&&q.subject==='数学')}
+function getQuestion(id){return qs.find(q=>String(q.id)===String(id)&&q.subject==='数学')}
 function setStatus(value,el){status=value;document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b===el));render()}
 function setNodeNumber(id,value){const el=$(id);if(el)el.firstChild.nodeValue=String(value)}
 function reviewTime(q){return Number(q.lastReviewedAt)||0}
@@ -59,7 +59,7 @@ function cardHtml(x){
   const checked=selected.has(x.id);
   const created=new Date(x.at||Date.now()).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'});
   const reviewed=x.lastReviewedAt?new Date(x.lastReviewedAt).toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'}):'—';
-  return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}${x.aiExplanation?.text?`<div class="q-ai-preview">已有AI讲解</div>`:''}<div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button onclick="openEdit('${x.id}')">编辑</button><button onclick="openAiExplain('${x.id}')">AI讲解</button><button onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
+  return `<article class="q-card ${checked?'selected':''}" data-id="${x.id}"><div class="q-head"><label class="q-check-wrap" title="选择这道题"><input type="checkbox" ${checked?'checked':''} onchange="toggleSelection('${x.id}',this.checked)"><span></span></label>${x.tag?`<span class="q-sub">${esc(x.tag)}</span>`:'<span class="q-sub muted-pill">未分类</span>'}<span class="q-status ${x.status||'wrong'}">${statusLabel[x.status]||'未掌握'}</span></div><div class="q-text">${esc(x.q)}</div>${x.a?`<div class="q-answer-preview"><b>答案：</b>${esc(x.a).slice(0,80)}${x.a.length>80?'…':''}</div>`:''}${x.aiExplanation?.text?`<div class="q-ai-preview">已有AI讲解</div>`:''}<button type="button" class="q-ai-main" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)"><b>AI</b><span>${x.aiExplanation?.text?'查看 / 重新生成AI讲解':'让AI讲解这道题'}</span></button><div class="q-meta"><span>${x.reason?`出错原因：${esc(x.reason)}`:'手动录入'}</span><span>录入 ${created} · 最近复习 ${reviewed}</span></div><div class="q-actions"><button type="button" onclick="openEdit('${x.id}')">编辑</button><button type="button" class="q-ai-action" data-ai-question="${esc(x.id)}" onclick="openAiExplain(this.dataset.aiQuestion)">AI讲解</button><button type="button" onclick="removeQuestion('${x.id}')">删除</button></div></article>`;
 }
 
 function enableSelection(){selectionMode=true;$('batchBar').classList.add('show');toast('请勾选需要统一管理的错题')}
