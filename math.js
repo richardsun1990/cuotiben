@@ -95,7 +95,7 @@ function insertFormula(symbol){const q=$('fQ'),start=q.selectionStart,end=q.sele
 function refreshTagSuggestions(){const dl=$('mathTags');if(!dl)return;const tags=[...new Set(mathQuestions().map(q=>q.tag).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'));dl.innerHTML=tags.map(t=>`<option value="${esc(t)}"></option>`).join('')}
 
 function getAiConfig(){
-  const fallback={endpoint:'http://192.168.3.110:11434/api/chat',model:'qwen3:1.7b'};
+  const fallback={endpoint:'/api/ai/explain',model:'qwen3:1.7b'};
   try{return {...fallback,...(JSON.parse(localStorage.getItem(MATH_AI_CONFIG_KEY)||'{}')||{})}}
   catch{return fallback}
 }
