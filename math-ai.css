@@ -10,6 +10,10 @@
   font-weight:700;
 }
 
+.q-ai-preview.generating{border-color:#cfc7f7;background:#f2efff;color:#614bd5}
+.q-ai-preview.queued{border-color:#d8dbe8;background:#f7f8fb;color:#747990}
+.q-ai-preview.failed{border-color:#f2d6b7;background:#fff8ef;color:#b07128}
+
 .top-data-tools .ai-tool-btn{
   border-color:#cfc7f7!important;
   background:#f5f2ff!important;
