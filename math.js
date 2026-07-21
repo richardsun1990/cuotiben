@@ -1,6 +1,8 @@
 const KEY='cuoti_v3';
 const MATH_ACTIVITY_KEY='dudu_math_activity_v1';
-const MATH_AI_CONFIG_KEY='dudu_math_ai_config_v1';
+const PROFILE_KEY='dudu_user_profile_v1';
+const AI_ENDPOINT='/api/ai/explain';
+const AI_MODEL='qwen3:1.7b';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const statusLabel={wrong:'未掌握',review:'复习中',done:'已掌握'};
@@ -94,32 +96,42 @@ function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.ra
 function insertFormula(symbol){const q=$('fQ'),start=q.selectionStart,end=q.selectionEnd;q.setRangeText(symbol,start,end,'end');q.focus()}
 function refreshTagSuggestions(){const dl=$('mathTags');if(!dl)return;const tags=[...new Set(mathQuestions().map(q=>q.tag).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'));dl.innerHTML=tags.map(t=>`<option value="${esc(t)}"></option>`).join('')}
 
-function getAiConfig(){
-  const fallback={endpoint:'/api/ai/explain',model:'qwen3:1.7b'};
-  try{return {...fallback,...(JSON.parse(localStorage.getItem(MATH_AI_CONFIG_KEY)||'{}')||{})}}
-  catch{return fallback}
+function getLearnerGrade(){
+  try{
+    const profile=JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}')||{};
+    return /^(一|二|三|四|五|六)年级$|^初[一二三]$/.test(profile.grade||'')?profile.grade:'三年级';
+  }catch{return '三年级'}
 }
 
-function saveAiSettings(silent=false){
-  const endpoint=($('aiEndpoint')?.value||'').trim();
-  const model=($('aiModel')?.value||'').trim()||'qwen3:1.7b';
-  if(!endpoint){toast('请填写AI接口地址');$('aiEndpoint')?.focus();return false}
-  localStorage.setItem(MATH_AI_CONFIG_KEY,JSON.stringify({endpoint,model}));
-  if(!silent)toast('AI设置已保存');
-  return true;
+function gradeLevel(grade){
+  const map={'一年级':1,'二年级':2,'三年级':3,'四年级':4,'五年级':5,'六年级':6,'初一':7,'初二':8,'初三':9};
+  return map[grade]||3;
+}
+
+function gradeMethodRules(grade){
+  const level=gradeLevel(grade);
+  if(level<=2)return '只用数数、分一分、画图、实物情境和加减法等直观方法。禁止使用字母表示未知数、列方程、负数、分数运算、比例、百分数和代数术语。';
+  if(level===3)return '只用四则运算、画图、列表、分步列式和生活情境。禁止用 x、y、z 等字母表示未知数，禁止列方程，禁止一元一次/二次方程、负数、比例、百分数、函数和代数式。';
+  if(level===4)return '优先用四则运算、线段图、列表和分步列式。禁止用 x、y、z 等字母列方程，禁止函数、负数和中学代数方法。';
+  if(level===5)return '可以使用本年级学过的小数、分数和简易方程，但优先用直观算术方法；禁止一元二次方程、函数和中学代数技巧。';
+  if(level===6)return '可以使用分数、比、百分数和简易方程，但禁止函数、一元二次方程等超出小学范围的方法。';
+  return '只使用该年级课内已学知识，先给直观思路，再给规范步骤；不得使用超出当前年级的公式、定理或解题技巧。';
+}
+
+function applyAiGradeLabel(){
+  const label=$('aiGradeLabel');
+  if(label)label.textContent=getLearnerGrade();
 }
 
 function openAiSettings(){
   aiQuestionId=null;
-  const cfg=getAiConfig();
   $('aiTitle').textContent='AI解题讲解';
-  $('aiQuestionPreview').innerHTML='<b>直接问本地AI</b><span>把不会的题输入到下面，不需要先录入错题。孩子卡在哪里可以不填。</span>';
+  $('aiQuestionPreview').innerHTML='<b>直接问AI</b><span>把不会的题输入到下面，不需要先录入错题。孩子卡在哪里可以不填。</span>';
   $('aiQuestionField').style.display='';
   $('aiQuestionInput').value='';
   $('aiHint').value='';
   $('aiHint').disabled=false;
-  $('aiModel').value=cfg.model;
-  $('aiEndpoint').value=cfg.endpoint;
+  applyAiGradeLabel();
   $('aiGenerateBtn').style.display='';
   $('aiGenerateBtn').textContent='生成AI讲解';
   setAiStatus('');
@@ -132,15 +144,13 @@ function openAiExplain(id){
   const q=getQuestion(id);
   if(!q)return;
   aiQuestionId=id;
-  const cfg=getAiConfig();
   $('aiTitle').textContent='AI错题讲解';
   $('aiQuestionPreview').innerHTML=`<b>${esc(q.tag||'数学题')}</b><p>${esc(q.q)}</p>${q.a?`<small>已有答案 / 思路：${esc(q.a)}</small>`:''}`;
   $('aiQuestionField').style.display='none';
   $('aiQuestionInput').value='';
   $('aiHint').disabled=false;
   $('aiHint').value=q.aiHint||'';
-  $('aiModel').value=cfg.model;
-  $('aiEndpoint').value=cfg.endpoint;
+  applyAiGradeLabel();
   $('aiGenerateBtn').style.display='';
   $('aiGenerateBtn').textContent=q.aiExplanation?.text?'重新生成AI讲解':'生成AI讲解';
   setAiStatus('');
@@ -166,7 +176,7 @@ function renderAiResult(data){
   if(!el)return;
   if(!data?.text){el.innerHTML='<div class="ai-empty">还没有生成讲解。点击“生成AI讲解”，本地模型会根据题目直接解释。</div>';return}
   const time=data.at?new Date(data.at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-  el.innerHTML=`<div class="ai-result-head"><b>AI讲解</b><span>${esc(data.model||'本地模型')}${time?' · '+esc(time):''}</span></div>${formatAiText(data.text)}`;
+  el.innerHTML=`<div class="ai-result-head"><b>AI讲解</b><span>${esc(data.grade||getLearnerGrade())}${time?' · '+esc(time):''}</span></div>${formatAiText(data.text)}`;
 }
 
 function formatAiText(text){
@@ -177,14 +187,17 @@ function formatAiText(text){
 }
 
 function buildAiPrompt(q,hint){
-  return `你是一个耐心的小学数学老师，正在给四年级孩子讲一道不会的题。请用中文回答，语气温和、清楚、不要太长。
+  const grade=getLearnerGrade();
+  return `你是一位耐心的数学老师，正在给${grade}孩子讲一道不会的题。请用中文回答，语气温和、清楚、不要太长。
 
 要求：
-1. 不要默认孩子已经在 iPad 上作答；孩子可能是在本子上做题。
-2. 孩子错误答案/卡住点是可选信息，没有提供时不要编造。
-3. 如果题目信息不足，请先指出缺少什么，不要硬编答案。
-4. 讲解要适合小学生，避免复杂术语。
-5. 最后给一道很短的同类小练习。
+1. 必须严格按${grade}课内水平讲解，不得使用高年级或中学知识。${gradeMethodRules(grade)}
+2. 不要默认孩子已经在 iPad 上作答；孩子可能是在本子上做题。
+3. 孩子错误答案/卡住点是可选信息，没有提供时不要编造。
+4. 如果题目信息不足，请先指出缺少什么，不要硬编答案。
+5. 每一步都说明为什么，尽量使用孩子熟悉的数字、图意或生活情境。
+6. 最后自查：方法和术语是否确实属于${grade}；若超纲，必须改成该年级能懂的方法。
+7. 最后给一道很短的同类小练习，不要使用超纲知识。
 
 请按下面结构输出：
 【这题考什么】
@@ -217,17 +230,22 @@ function parseAiResponse(data){
   return data?.explanation||data?.text||data?.content||data?.message?.content||data?.response||data?.choices?.[0]?.message?.content||'';
 }
 
-async function requestAiExplanation(endpoint,model,prompt,q,hint){
+async function requestAiExplanation(prompt,q,hint,grade){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),90000);
-  const isOllamaChat=/\/api\/chat\/?$/.test(endpoint);
-  const isOllamaGenerate=/\/api\/generate\/?$/.test(endpoint);
-  const body=isOllamaChat?{model,messages:[{role:'system',content:'你只负责讲解小学数学题，必须诚实、清楚、适合孩子理解。'},{role:'user',content:prompt}],stream:false,options:{temperature:.2}}:isOllamaGenerate?{model,prompt,stream:false,options:{temperature:.2}}:{question:q.q||'',subject:'数学',grade:'小学四年级',correctAnswer:q.a||'',wrongAnswer:hint||'',knowledgePoint:q.tag||'',model,prompt};
+  const body={question:q.q||'',subject:'数学',grade,correctAnswer:q.a||'',wrongAnswer:hint||'',knowledgePoint:q.tag||'',model:AI_MODEL,prompt};
   try{
-    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
+    const res=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
     return parseAiResponse(await res.json());
   }finally{clearTimeout(timer)}
+}
+
+function answerExceedsGrade(text,grade){
+  const level=gradeLevel(grade);
+  if(level>4)return false;
+  const compact=String(text||'').replace(/\s+/g,'');
+  return /(^|[^A-Za-z])[xyzXYZ]([^A-Za-z]|$)|未知数|方程|一元[一二]次|代数式|函数/.test(compact);
 }
 
 async function generateAiExplanation(){
@@ -235,19 +253,25 @@ async function generateAiExplanation(){
   const storedQuestion=getQuestion(aiQuestionId);
   const q=storedQuestion||buildDirectAiQuestion();
   if(!q){toast('请先输入题目内容');$('aiQuestionInput')?.focus();return}
-  if(!saveAiSettings(true))return;
-  const cfg=getAiConfig();
   const hint=($('aiHint')?.value||'').trim();
+  const grade=getLearnerGrade();
   const prompt=buildAiPrompt(q,hint);
   aiGenerating=true;
   $('aiGenerateBtn').disabled=true;
-  setAiStatus('本地模型正在生成讲解，第一次可能会慢一点……','loading');
+  setAiStatus(`正在按${grade}知识范围生成讲解，请稍候……`,'loading');
   try{
-    const text=await requestAiExplanation(cfg.endpoint,cfg.model,prompt,q,hint);
+    let text=await requestAiExplanation(prompt,q,hint,grade);
     if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
+    if(answerExceedsGrade(text,grade)){
+      setAiStatus(`正在检查${grade}知识范围，并重新整理讲解……`,'loading');
+      const retryPrompt=`${prompt}\n\n上一次回答使用了超出${grade}范围的字母未知数、方程或代数方法。请完全重写，严格遵守：${gradeMethodRules(grade)}不要解释被禁止的方法，也不要在答案中出现 x、y、z 或“列方程”等表述。`;
+      text=await requestAiExplanation(retryPrompt,q,hint,grade);
+      if(!text.trim())throw new Error('EMPTY_AI_RESPONSE');
+      if(answerExceedsGrade(text,grade))throw new Error('GRADE_VIOLATION');
+    }
     if(storedQuestion){
       q.aiHint=hint;
-      q.aiExplanation={text:text.trim(),model:cfg.model,at:Date.now()};
+      q.aiExplanation={text:text.trim(),grade,at:Date.now()};
       q.edited=Date.now();
       if(save()){
         renderAiResult(q.aiExplanation);
@@ -257,13 +281,13 @@ async function generateAiExplanation(){
         toast('AI讲解已生成');
       }
     }else{
-      renderAiResult({text:text.trim(),model:cfg.model,at:Date.now()});
+      renderAiResult({text:text.trim(),grade,at:Date.now()});
       setAiStatus('讲解已生成。直接提问不会自动加入错题本，需要保存时可以复制到错题答案/思路里。','success');
       toast('AI讲解已生成');
     }
   }catch(error){
     console.error(error);
-    const message=error.name==='AbortError'?'生成超时，请确认飞牛模型是否正在运行。':'AI讲解失败，请检查接口地址、Ollama服务和浏览器跨域设置。';
+    const message=error.name==='AbortError'?'生成超时，请稍后再试。':error.message==='GRADE_VIOLATION'?`讲解未通过${grade}知识范围检查，请重新生成。`:'AI讲解暂时无法生成，请确认本地AI服务已启动后重试。';
     setAiStatus(message,'error');
   }finally{
     aiGenerating=false;
