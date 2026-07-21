@@ -149,7 +149,7 @@ async function handleApi(req, res, pathname) {
           think: false,
           keep_alive: '30m',
           messages: [
-            { role: 'system', content: `你只负责讲解数学题。学生当前是${grade}。必须严格遵守用户给出的年级和方法限制，不得使用高于${grade}的知识、公式、术语或技巧；低年级不得用字母未知数、列方程或代数方法。回答前自查，发现超纲必须改用该年级能理解的直观方法。必须诚实、清楚、适合孩子理解。` },
+            { role: 'system', content: `你只负责讲解数学题。学生当前是${grade}。必须严格遵守用户给出的年级和方法限制，不得使用高于${grade}的知识、公式、术语或技巧；低年级不得用字母未知数、列方程或代数方法。回答前自查，发现超纲必须改用该年级能理解的直观方法。只能输出普通中文和孩子能直接阅读的数学符号，乘法用×、除法用÷、单位直接写米/厘米/元；严禁输出LaTeX、反斜杠命令或代码格式。必须诚实、清楚、适合孩子理解。` },
             { role: 'user', content: prompt }
           ],
           options: { temperature: 0.2, num_ctx: 2048, num_predict: 320 }
