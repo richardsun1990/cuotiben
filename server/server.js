@@ -42,7 +42,7 @@ function corsHeaders(req) {
   const allowOrigin = ALLOWED_ORIGINS.includes('*') || !origin || ALLOWED_ORIGINS.includes(origin) ? (origin || '*') : ALLOWED_ORIGINS[0];
   return {
     'access-control-allow-origin': allowOrigin,
-    'access-control-allow-methods': 'GET,PUT,OPTIONS',
+    'access-control-allow-methods': 'GET,PUT,POST,OPTIONS',
     'access-control-allow-headers': 'content-type,authorization,x-sync-token',
     'access-control-max-age': '86400'
   };
