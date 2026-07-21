@@ -49,7 +49,7 @@ function render(){
   if(!list.length){g.innerHTML='<div class="empty"><img src="assets/empty-box.svg" alt="暂无单词"><b>这里还没有单词</b><span>在上方输入英文，系统会自动建立拼读卡片。</span></div>';updateWordBatchBar();return}
   g.innerHTML=list.map(w=>{
     const [sl,sc]=statusOf(w),acc=accuracyOf(w),checked=selectedWordIds.has(w.id);
-    return`<article class="card ${checked?'selected':''}"><label class="word-select" title="选择 ${esc(w.word)}"><input type="checkbox" ${checked?'checked':''} onchange="toggleWordSelection('${w.id}',this.checked)"><span aria-hidden="true"></span><em>选择</em></label><div class="card-head"><div class="grow"><div class="word">${esc(w.word)}</div><div class="phonetic">${esc(w.phonetic||'音标暂缺')}</div><div class="meaning">${esc(w.meaning||'释义待确认')}</div><span class="status ${sc}">${sl}</span></div><span class="source">${esc(w.source)}</span></div><div class="skill"><div class="skill-title">${w.isIrregular?'❤️ 特殊部分单独记':'🔤 规则拼读'}</div><div class="syllables">${(w.syllables||[w.word]).map(s=>`<span class="syl">${esc(s)}</span>`).join('')}</div><div class="patterns">${(w.chunks||[[w.word,0]]).map(c=>`<span class="pattern ${c[1]?'irregular':''}">${esc(c[0])}</span>`).join('')}</div><div class="tip">${esc(w.phonicsTip)}</div></div><div class="card-meta"><b>练习：</b>${w.seen||0} 次　<b>正确率：</b>${w.seen?acc+'%':'尚未学习'}<div class="mastery-line"><span>熟练度</span><div class="mini-bar"><i style="width:${Math.min(100,(w.level||0)/7*100)}%"></i></div><span>${w.level||0}/7</span></div></div><div class="actions"><button class="learn" onclick="studyOne('${w.id}')">专项学习</button><button onclick="playWord('${w.id}')">播放发音</button><button class="weak-btn ${w.weak?'on':''}" onclick="toggleWeak('${w.id}')">${w.weak?'取消不熟悉':'标记不熟悉'}</button><button onclick="removeWord('${w.id}')">删除</button></div></article>`
+    return`<article class="card ${checked?'selected':''}"><label class="word-select" title="选择 ${esc(w.word)}"><input type="checkbox" ${checked?'checked':''} onchange="toggleWordSelection('${w.id}',this.checked)"><span aria-hidden="true"></span><em>选择</em></label><div class="card-head"><div class="grow"><div class="word">${esc(w.word)}</div><div class="phonetic">${esc(w.phonetic||'音标暂缺')}</div><div class="meaning">${esc(w.meaning||'释义待确认')}</div><span class="status ${sc}">${sl}</span></div><span class="source">${esc(w.source)}</span></div><div class="skill"><div class="skill-title">${w.isIrregular?'❤️ 特殊部分单独记':'🔤 规则拼读'}</div><div class="syllables">${(w.syllables||[w.word]).map(s=>`<span class="syl">${esc(s)}</span>`).join('')}</div><div class="patterns">${(w.chunks||[[w.word,0]]).map(c=>`<span class="pattern ${c[1]?'irregular':''}">${esc(c[0])}</span>`).join('')}</div><div class="tip">${esc(w.phonicsTip)}</div></div><div class="card-meta"><b>练习：</b>${w.seen||0} 次　<b>正确率：</b>${w.seen?acc+'%':'尚未学习'}<div class="mastery-line"><span>熟练度</span><div class="mini-bar"><i style="width:${Math.min(100,(w.level||0)/7*100)}%"></i></div><span>${w.level||0}/7</span></div></div><div class="actions"><button class="learn" onclick="studyOne('${w.id}')">专项学习</button><button onclick="playWord('${w.id}')">播放发音</button><select class="card-status-select" aria-label="调整 ${esc(w.word)} 的学习状态" onchange="setWordStatus('${w.id}',this.value)"><option value="">状态调整</option><option value="new">未学习</option><option value="weak">不熟悉</option><option value="review">复习中</option><option value="master">已掌握</option></select><button class="delete-word" onclick="removeWord('${w.id}')">删除</button></div></article>`
   }).join('');
   updateWordBatchBar();
 }
@@ -68,17 +68,25 @@ function toggleWordSelection(id,checked){
 function selectAllVisibleWords(){visibleWordIds.forEach(id=>selectedWordIds.add(id));render();toast(`已选择当前 ${visibleWordIds.length} 个单词`)}
 function clearWordSelection(){selectedWordIds.clear();render()}
 function selectedWords(){return words.filter(w=>selectedWordIds.has(w.id))}
+const WORD_STATUS_LABELS={new:'未学习',weak:'不熟悉',review:'复习中',master:'已掌握'};
+function updateWordStatus(w,status){
+  if(!w||!WORD_STATUS_LABELS[status])return false;
+  if(status==='new'){w.seen=0;w.correct=0;w.level=0;w.due=0;w.weak=false;w.lapses=0;w.spellStreak=0;w.introducedDay=null;w.lastStudiedAt=null}
+  if(status==='weak'){w.seen=Math.max(1,w.seen||0);w.level=Math.min(2,w.level||0);w.due=day();w.weak=true;w.spellStreak=0}
+  if(status==='review'){w.seen=Math.max(1,w.seen||0);w.correct=Math.max(w.correct||0,Math.ceil(w.seen*.75));w.level=Math.max(3,Math.min(4,w.level||3));w.due=day()+1;w.weak=false;w.spellStreak=Math.min(1,w.spellStreak||0)}
+  if(status==='master'){w.seen=Math.max(1,w.seen||0);w.correct=Math.max(w.correct||0,Math.ceil(w.seen*.75));w.level=Math.max(5,w.level||0);w.due=day()+30;w.weak=false;w.spellStreak=Math.max(2,w.spellStreak||0)}
+  return true;
+}
+function setWordStatus(id,status){
+  if(!status)return;
+  const w=words.find(x=>x.id===id);if(!updateWordStatus(w,status)){toast('状态调整失败');return}
+  persist();render();toast(`${w.word} 已设为“${WORD_STATUS_LABELS[status]}”`);
+}
 function applySelectedWordStatus(status){
   if(!status)return;
   const selected=selectedWords();if(!selected.length){toast('请先勾选单词');return}
-  selected.forEach(w=>{
-    if(status==='new'){w.seen=0;w.correct=0;w.level=0;w.due=0;w.weak=false;w.lapses=0;w.spellStreak=0;w.introducedDay=null;w.lastStudiedAt=null}
-    if(status==='weak'){w.seen=Math.max(1,w.seen||0);w.level=Math.min(2,w.level||0);w.due=day();w.weak=true;w.spellStreak=0}
-    if(status==='review'){w.seen=Math.max(1,w.seen||0);w.correct=Math.max(w.correct||0,Math.ceil(w.seen*.75));w.level=Math.max(3,Math.min(4,w.level||3));w.due=day()+1;w.weak=false;w.spellStreak=Math.min(1,w.spellStreak||0)}
-    if(status==='master'){w.seen=Math.max(1,w.seen||0);w.correct=Math.max(w.correct||0,Math.ceil(w.seen*.75));w.level=Math.max(5,w.level||0);w.due=day()+30;w.weak=false;w.spellStreak=Math.max(2,w.spellStreak||0)}
-  });
-  const labels={new:'未学习',weak:'不熟悉',review:'复习中',master:'已掌握'};
-  persist();selectedWordIds.clear();render();toast(`已将 ${selected.length} 个单词设为“${labels[status]}”`);
+  selected.forEach(w=>updateWordStatus(w,status));
+  persist();selectedWordIds.clear();render();toast(`已将 ${selected.length} 个单词设为“${WORD_STATUS_LABELS[status]}”`);
 }
 function startSelectedWords(kind){
   const selected=selectedWords();if(!selected.length){toast('请先勾选要学习或测试的单词');return}
