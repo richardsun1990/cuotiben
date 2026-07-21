@@ -9,7 +9,6 @@
 .challenge img,
 .eng-stats strong.star img,
 .words-title > img {
-  content: normal !important;
   object-fit: contain !important;
   background: transparent !important;
   pointer-events: none;
@@ -17,6 +16,14 @@
   -webkit-user-drag: none;
   filter: drop-shadow(0 14px 22px rgba(77, 64, 143, .14));
 }
+
+/* All illustrations are local transparent PNGs. Never depend on expiring Adobe URLs. */
+.hero-art { content: url("assets/cats/home-study.png") !important; }
+.left-cat, .side-cat, .eng-side-cat { content: url("assets/cats/side-sleep.png") !important; }
+.right-cat, .challenge img, .eng-stats strong.star img { content: url("assets/cats/cheer.png") !important; }
+.welcome img { content: url("assets/cats/math-banner.png") !important; }
+.eng-hero > img { content: url("assets/cats/english-study.png") !important; }
+.words-title > img { content: url("assets/cats/cat-book.png") !important; }
 
 .hero-art,
 .welcome img,
