@@ -189,10 +189,34 @@ function renderAiResult(data){
 }
 
 function formatAiText(text){
-  return String(text||'').trim().split(/\n{2,}/).filter(Boolean).map(block=>{
+  return normalizeMathNotation(text).trim().split(/\n{2,}/).filter(Boolean).map(block=>{
     const safe=esc(block).replace(/\n/g,'<br>');
     return `<p>${safe}</p>`;
   }).join('');
+}
+
+function normalizeMathNotation(text){
+  let value=String(text||'');
+  value=value
+    .replace(/\\begin\{(?:aligned|align\*?|gathered|array)\}/g,'')
+    .replace(/\\end\{(?:aligned|align\*?|gathered|array)\}/g,'')
+    .replace(/\\(?:left|right)/g,'')
+    .replace(/\\(?:text|mathrm|operatorname|boxed|overline|underline)\s*\{([^{}]*)\}/g,'$1')
+    .replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,'($1/$2)')
+    .replace(/\\sqrt\s*\{([^{}]+)\}/g,'√($1)')
+    .replace(/\\times\b/g,'×').replace(/\\div\b/g,'÷').replace(/\\cdot\b/g,'·')
+    .replace(/\\pm\b/g,'±').replace(/\\leq?\b/g,'≤').replace(/\\geq?\b/g,'≥')
+    .replace(/\\neq?\b/g,'≠').replace(/\\approx\b/g,'≈').replace(/\\circ\b/g,'°')
+    .replace(/\\(?:quad|qquad|,|;|!)\s*/g,' ')
+    .replace(/\\\\/g,'\n')
+    .replace(/\\[()\[\]]/g,'')
+    .replace(/\$\$?|`/g,'')
+    .replace(/\^\{?2\}?/g,'²').replace(/\^\{?3\}?/g,'³')
+    .replace(/_\{([^{}]+)\}/g,'_$1')
+    .replace(/[{}]/g,'')
+    .replace(/[ \t]+/g,' ')
+    .replace(/ +\n/g,'\n');
+  return value;
 }
 
 function buildAiPrompt(q,hint){
@@ -207,6 +231,7 @@ function buildAiPrompt(q,hint){
 5. 只保留必要步骤，每一步简短说明为什么，尽量使用孩子熟悉的数字、图意或生活情境。
 6. 最后自查：方法和术语是否确实属于${grade}；若超纲，必须改成该年级能懂的方法。
 7. 最后给一道很短的同类小练习，不要使用超纲知识。
+8. 只能使用孩子直接看得懂的普通数学符号：乘法写“×”，除法写“÷”，单位直接写“米、厘米、元”等。禁止输出 LaTeX、反斜杠命令、代码格式或类似 \\times、\\text{}、\\frac{} 的写法。
 
 请按下面结构输出：
 【这题考什么】
