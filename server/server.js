@@ -126,30 +126,45 @@ async function handleApi(req, res, pathname) {
     }
   }
   if (pathname === '/api/ai/explain' && req.method === 'POST') {
+    let aiController = null;
+    let aiTimer = null;
+    let closeHandler = null;
     try {
       const body = await readBody(req);
       const prompt = String(body.prompt || '').trim();
       const grade = String(body.grade || '三年级').trim() || '三年级';
       const model = String(body.model || DEFAULT_AI_MODEL).trim() || DEFAULT_AI_MODEL;
       if (!prompt) return send(res, 400, { error: '题目信息不足，无法生成讲解' }, headers);
+      aiController = new AbortController();
+      aiTimer = setTimeout(() => aiController.abort(), 240000);
+      closeHandler = () => { if (!res.writableEnded) aiController.abort(); };
+      res.once('close', closeHandler);
       const aiResponse = await fetch(`${OLLAMA_URL}/api/chat`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        signal: aiController.signal,
         body: JSON.stringify({
           model,
           stream: false,
+          think: false,
+          keep_alive: '30m',
           messages: [
             { role: 'system', content: `你只负责讲解数学题。学生当前是${grade}。必须严格遵守用户给出的年级和方法限制，不得使用高于${grade}的知识、公式、术语或技巧；低年级不得用字母未知数、列方程或代数方法。回答前自查，发现超纲必须改用该年级能理解的直观方法。必须诚实、清楚、适合孩子理解。` },
             { role: 'user', content: prompt }
           ],
-          options: { temperature: 0.2 }
+          options: { temperature: 0.2, num_ctx: 4096, num_predict: 650 }
         })
       });
       const aiData = await aiResponse.json().catch(() => ({}));
       if (!aiResponse.ok) return send(res, aiResponse.status, { error: aiData.error || '本地模型调用失败' }, headers);
       return send(res, 200, { text: aiData.message?.content || aiData.response || '', model }, headers);
     } catch (error) {
-      return send(res, 500, { error: error.message || 'AI讲解失败' }, headers);
+      if (res.destroyed) return;
+      const timedOut = error.name === 'AbortError';
+      return send(res, timedOut ? 504 : 500, { error: timedOut ? '本地模型生成超过4分钟，已停止本次任务' : (error.message || 'AI讲解失败') }, headers);
+    } finally {
+      if (aiTimer) clearTimeout(aiTimer);
+      if (closeHandler) res.removeListener('close', closeHandler);
     }
   }
 
